@@ -48,3 +48,4 @@ router.delete('/:id', authorize(UserRole.ADMIN), validateParams(productParamsSch
 
 export default router;
 
+

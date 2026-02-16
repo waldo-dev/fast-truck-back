@@ -11,3 +11,4 @@ REFERENCES public.businesses(id);
 -- Crear índice para búsquedas rápidas
 CREATE INDEX IF NOT EXISTS idx_users_business_id ON public.users(business_id);
 
+

@@ -69,3 +69,4 @@ export class PaymentConfigRepository {
 
 export const paymentConfigRepository = new PaymentConfigRepository();
 
+

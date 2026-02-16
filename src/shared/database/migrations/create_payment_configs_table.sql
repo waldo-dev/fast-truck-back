@@ -30,3 +30,4 @@ CREATE INDEX IF NOT EXISTS idx_payment_configs_business_id ON public.payment_con
 CREATE INDEX IF NOT EXISTS idx_payment_configs_provider ON public.payment_configs(provider);
 CREATE INDEX IF NOT EXISTS idx_payment_configs_active ON public.payment_configs(active);
 
+

@@ -17,3 +17,4 @@ CREATE INDEX IF NOT EXISTS idx_otps_expires_at ON public.otps(expires_at);
 -- Crear índice compuesto para búsquedas de verificación
 CREATE INDEX IF NOT EXISTS idx_otps_phone_code_verified ON public.otps(phone, code, verified);
 
+

@@ -91,3 +91,4 @@ export const removeProductsFromPromotionSchema = z.object({
   product_ids: z.array(z.number().int().positive('Product ID must be a positive integer')).min(1, 'At least one product is required'),
 });
 
+

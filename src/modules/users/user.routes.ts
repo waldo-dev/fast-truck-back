@@ -33,3 +33,4 @@ router.delete('/:id', authorize(UserRole.ADMIN), validateParams(userParamsSchema
 
 export default router;
 
+

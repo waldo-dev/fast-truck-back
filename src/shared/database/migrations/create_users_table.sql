@@ -22,3 +22,4 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 -- Crear índice en role para filtros
 CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
 
+

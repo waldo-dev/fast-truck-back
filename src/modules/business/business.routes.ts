@@ -26,3 +26,4 @@ router.delete('/:id', authorize(UserRole.ADMIN), businessController.delete);
 
 export default router;
 
+

@@ -18,3 +18,4 @@ router.post('/', authorize(UserRole.ADMIN), validate(createPaymentConfigSchema),
 
 export default router;
 
+

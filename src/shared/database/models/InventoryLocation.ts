@@ -63,3 +63,4 @@ InventoryLocation.init(
   }
 );
 
+

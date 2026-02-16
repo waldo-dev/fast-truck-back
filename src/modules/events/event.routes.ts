@@ -22,3 +22,4 @@ router.post('/', authorize(UserRole.ADMIN), validate(createEventSchema), eventCo
 
 export default router;
 
+

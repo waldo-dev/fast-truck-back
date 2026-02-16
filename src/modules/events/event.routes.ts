@@ -1,0 +1,24 @@
+import { Router } from 'express';
+import { authenticate, authorize, injectBusinessId, validate, validateParams } from '../../shared/middlewares';
+import { UserRole } from '../../shared/database/models/enums';
+import { eventController } from './event.controller';
+import { createEventSchema, eventParamsSchema } from './event.schemas';
+
+const router = Router();
+
+// Todas las rutas requieren autenticación y business_id
+router.use(authenticate);
+router.use(injectBusinessId);
+
+// GET /events - Listar eventos (ADMIN y STAFF pueden leer)
+// Query param: future=true para solo eventos futuros
+router.get('/', eventController.getAll);
+
+// GET /events/:id - Detalle evento (ADMIN y STAFF pueden leer)
+router.get('/:id', validateParams(eventParamsSchema), eventController.getById);
+
+// POST /events - Crear evento (solo ADMIN)
+router.post('/', authorize(UserRole.ADMIN), validate(createEventSchema), eventController.create);
+
+export default router;
+

@@ -1,0 +1,58 @@
+import express, { Application } from 'express';
+import { logger } from './shared/utils';
+import { errorHandler, notFoundHandler } from './shared/middlewares';
+import healthRoutes from './modules/health/health.routes';
+import authRoutes from './modules/auth/auth.routes';
+import businessRoutes from './modules/business/business.routes';
+import userRoutes from './modules/users/user.routes';
+import customerRoutes from './modules/customers/customer.routes';
+import categoryRoutes from './modules/categories/category.routes';
+import productRoutes from './modules/products/product.routes';
+import productOptionRoutes from './modules/product-options/product-option.routes';
+import promotionRoutes from './modules/promotions/promotion.routes';
+import locationRoutes from './modules/locations/location.routes';
+import eventRoutes from './modules/events/event.routes';
+import orderRoutes from './modules/orders/order.routes';
+import paymentRoutes from './modules/payments/payment.routes';
+import paymentConfigRoutes from './modules/payment-configs/payment-config.routes';
+import publicRoutes from './modules/public/public.routes';
+
+const createApp = (): Application => {
+  const app = express();
+
+  // Middlewares básicos
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Logging de requests
+  app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.path}`);
+    next();
+  });
+
+  // Routes
+  app.use('/', healthRoutes);
+  app.use('/auth', authRoutes);
+  app.use('/businesses', businessRoutes);
+  app.use('/users', userRoutes);
+  app.use('/customers', customerRoutes);
+  app.use('/categories', categoryRoutes);
+  app.use('/products', productRoutes);
+  app.use('/', productOptionRoutes); // /products/:id/options y /product-options/:id
+  app.use('/promotions', promotionRoutes);
+  app.use('/locations', locationRoutes);
+  app.use('/events', eventRoutes);
+  app.use('/orders', orderRoutes);
+  app.use('/payments', paymentRoutes);
+  app.use('/payment-configs', paymentConfigRoutes);
+  app.use('/public', publicRoutes);
+
+  // Error handlers (deben ir al final)
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+
+  return app;
+};
+
+export default createApp;
+

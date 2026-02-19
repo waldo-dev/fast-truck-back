@@ -1,7 +1,6 @@
 import { Response, NextFunction } from 'express';
-import { extractBusinessId } from '../../shared/middlewares';
-import { Product, Promotion, Event, PaymentConfig, PaymentMethod } from '../../shared/database/models';
-import { ProductStatus, DiscountType } from '../../shared/database/models/enums';
+import { Product, Promotion, Event, PaymentConfig } from '../../shared/database/models';
+import { ProductStatus, DiscountType, PaymentMethod } from '../../shared/database/models/enums';
 import { Op } from 'sequelize';
 
 export class PublicController {
@@ -37,8 +36,10 @@ export class PublicController {
         where: {
           business_id: businessId,
           active: true,
-          [Op.or]: [{ start_date: null }, { start_date: { [Op.lte]: today } }],
-          [Op.or]: [{ end_date: null }, { end_date: { [Op.gte]: today } }],
+          [Op.and]: [
+            { [Op.or]: [{ start_date: null }, { start_date: { [Op.lte]: today } }] },
+            { [Op.or]: [{ end_date: null }, { end_date: { [Op.gte]: today } }] },
+          ],
         },
         attributes: ['id', 'name', 'description', 'discount_type', 'discount_value', 'start_date', 'end_date'],
         include: [

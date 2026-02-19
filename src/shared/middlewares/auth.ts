@@ -15,7 +15,7 @@ export interface AuthRequest extends Request {
   business_id?: number;
 }
 
-export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const authenticate = async (req: AuthRequest, _res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 

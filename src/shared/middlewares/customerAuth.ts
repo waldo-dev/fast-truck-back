@@ -1,8 +1,8 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors';
 import { Customer } from '../database/models';
 
-export interface CustomerRequest extends Express.Request {
+export interface CustomerRequest extends Request {
   customer?: {
     id: number;
     phone: string;
@@ -17,7 +17,7 @@ export interface CustomerRequest extends Express.Request {
  */
 export const authenticateCustomer = async (
   req: CustomerRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {

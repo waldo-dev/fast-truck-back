@@ -4,7 +4,7 @@ import { AuthRequest } from './auth';
 import { UserRole } from '../database/models/enums';
 
 export const authorize = (...roles: UserRole[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+  return (req: AuthRequest, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AppError('Authentication required', 401);
     }

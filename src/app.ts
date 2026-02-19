@@ -25,7 +25,7 @@ const createApp = (): Application => {
   app.use(express.urlencoded({ extended: true }));
 
   // Logging de requests
-  app.use((req, res, next) => {
+  app.use((req, _res, next) => {
     logger.info(`${req.method} ${req.path}`);
     next();
   });

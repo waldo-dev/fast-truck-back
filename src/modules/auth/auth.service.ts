@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { AppError } from '../../shared/errors';
 import { authRepository } from './auth.repository';
@@ -16,6 +16,7 @@ interface LoginResponse {
     email: string;
     name: string;
     role: string;
+    business_id: number | null;
   };
 }
 
@@ -39,19 +40,17 @@ export class AuthService {
       throw new AppError('Invalid credentials', 401);
     }
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        business_id: user.business_id,
-      },
-      env.JWT_SECRET,
-      {
-        expiresIn: env.JWT_EXPIRES_IN,
-      }
-    );
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      business_id: user.business_id,
+    };
+
+    const token = jwt.sign(tokenPayload, env.JWT_SECRET as Secret, {
+      expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
+    });
 
     return {
       token,

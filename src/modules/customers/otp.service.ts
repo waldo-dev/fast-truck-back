@@ -1,6 +1,5 @@
 import { Op } from 'sequelize';
 import { Otp } from '../../shared/database/models';
-import { AppError } from '../../shared/errors';
 import { generateOtp, getOtpExpiration, isOtpExpired } from '../../shared/utils/otp';
 import { logger } from '../../shared/utils';
 

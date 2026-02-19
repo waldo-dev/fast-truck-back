@@ -39,7 +39,7 @@ export class UserService {
       email: data.email,
       password: data.password,
       name: data.name,
-      role: role as string,
+      role,
     });
 
     return user;

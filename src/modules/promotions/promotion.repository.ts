@@ -161,9 +161,7 @@ export class PromotionRepository {
   }
 
   public async addProducts(promotionId: number, businessId: number, productIds: number[]) {
-    const promotion = await this.findById(promotionId, businessId);
 
-    // Verificar que los productos pertenezcan al mismo business
     const products = await Product.findAll({
       where: {
         id: { [Op.in]: productIds },

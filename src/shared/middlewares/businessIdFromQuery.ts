@@ -6,7 +6,7 @@ import { CustomerRequest } from './customerAuth';
  * Middleware para extraer business_id de query params o body
  * Útil para endpoints públicos que no requieren autenticación JWT
  */
-export const extractBusinessId = (req: CustomerRequest, res: Response, next: NextFunction): void => {
+export const extractBusinessId = (req: CustomerRequest, _res: Response, next: NextFunction): void => {
   const businessId =
     req.business_id ||
     parseInt(req.query.business_id as string, 10) ||

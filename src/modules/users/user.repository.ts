@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { User } from '../../shared/database/models';
+import { UserRole } from '../../shared/database/models/enums';
 import { AppError } from '../../shared/errors';
 
 export class UserRepository {
@@ -47,7 +48,7 @@ export class UserRepository {
     email: string;
     password: string;
     name: string;
-    role: string;
+    role: UserRole;
   }) {
     // Verificar que el email no esté en uso
     const existingUser = await this.findByEmail(data.email, data.business_id);
@@ -63,7 +64,7 @@ export class UserRepository {
       email: data.email,
       password: hashedPassword,
       name: data.name,
-      role: data.role as any,
+      role: data.role,
       active: true,
     });
 
@@ -76,7 +77,7 @@ export class UserRepository {
     data: {
       name?: string;
       email?: string;
-      role?: string;
+      role?: UserRole;
       active?: boolean;
     }
   ) {

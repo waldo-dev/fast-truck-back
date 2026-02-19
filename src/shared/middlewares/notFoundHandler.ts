@@ -1,9 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 
 export const notFoundHandler = (
   req: Request,
-  res: Response,
-  next: NextFunction
+  res: Response
 ): void => {
   res.status(404).json({
     success: false,

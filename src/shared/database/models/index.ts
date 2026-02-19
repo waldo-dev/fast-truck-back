@@ -20,8 +20,6 @@ import { PromotionProduct } from './PromotionProduct';
 import { User } from './User';
 import { Otp } from './Otp';
 import { PaymentConfig } from './PaymentConfig';
-import { Location } from './Location';
-import { Event } from './Event';
 
 // Inicializar relaciones
 const initializeRelations = (): void => {

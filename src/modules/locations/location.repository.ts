@@ -1,4 +1,3 @@
-import { Op } from 'sequelize';
 import { Location } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 

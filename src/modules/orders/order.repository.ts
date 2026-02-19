@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Order, OrderItem, Product, ProductOption, Promotion, PromotionProduct, Customer, CustomerAddress, Event, Location } from '../../shared/database/models';
+import { Order, OrderItem, Product, ProductOption, Promotion, Customer, CustomerAddress, Event } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 import { OrderSource, OrderStatus, OrderType, DiscountType } from '../../shared/database/models/enums';
 
@@ -58,13 +58,9 @@ export class OrderRepository {
       where: {
         business_id: businessId,
         active: true,
-        [Op.or]: [
-          { start_date: null },
-          { start_date: { [Op.lte]: today } },
-        ],
-        [Op.or]: [
-          { end_date: null },
-          { end_date: { [Op.gte]: today } },
+        [Op.and]: [
+          { [Op.or]: [{ start_date: null }, { start_date: { [Op.lte]: today } }] },
+          { [Op.or]: [{ end_date: null }, { end_date: { [Op.gte]: today } }] },
         ],
       },
       include: [

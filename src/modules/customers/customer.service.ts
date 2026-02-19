@@ -15,7 +15,7 @@ export class CustomerService {
   /**
    * Envía OTP a un teléfono (mock)
    */
-  public async sendOtp(phone: string, businessId: number) {
+  public async sendOtp(phone: string, _businessId: number) {
     // Validar formato de teléfono básico
     if (!phone || phone.length < 10) {
       throw new AppError('Invalid phone number', 400);

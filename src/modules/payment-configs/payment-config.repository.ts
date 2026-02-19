@@ -1,6 +1,6 @@
 import { PaymentConfig } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
-import { PaymentProvider } from '../../shared/database/models/enums';
+import { PaymentProvider, PaymentEnvironment } from '../../shared/database/models/enums';
 
 export class PaymentConfigRepository {
   public async findActive(businessId: number) {
@@ -45,7 +45,7 @@ export class PaymentConfigRepository {
     provider: PaymentProvider;
     commerce_code: string;
     api_key: string;
-    environment: string;
+    environment: PaymentEnvironment;
     active?: boolean;
   }) {
     // Si se marca como activo, desactivar otras configuraciones del mismo provider

@@ -1,4 +1,4 @@
-import app from './app';
+import createApp from './app';
 import { env } from './config/env';
 import { logger } from './shared/utils';
 import { connectDatabase } from './shared/database';
@@ -9,6 +9,8 @@ const startServer = async (): Promise<void> => {
   try {
     // Conectar a la base de datos
     await connectDatabase();
+
+    const app = createApp();
 
     // Iniciar servidor
     app.listen(env.PORT, () => {

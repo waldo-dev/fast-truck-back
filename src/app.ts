@@ -20,10 +20,10 @@ import publicRoutes from './modules/public/public.routes';
 const createApp = (): Application => {
   const app = express();
 
-  const allowedOrigin = 'https://fast-trucks.chilsmart.com';
+  const allowedOrigins = ['https://fast-trucks.chilsmart.com', 'http://localhost:3000'];
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin === allowedOrigin) {
+    if (origin && allowedOrigins.includes(origin)) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Access-Control-Allow-Credentials', 'true');
     }

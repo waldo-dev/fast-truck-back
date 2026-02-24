@@ -11,12 +11,15 @@ interface LoginCredentials {
 
 interface LoginResponse {
   token: string;
+  role: string;
+  businessId: string | null;
   user: {
     id: number;
     email: string;
     name: string;
     role: string;
     business_id: number | null;
+    businessId: string | null;
   };
 }
 
@@ -52,14 +55,19 @@ export class AuthService {
       expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
     });
 
+    const businessIdString = user.business_id !== null ? String(user.business_id) : null;
+
     return {
       token,
+      role: user.role,
+      businessId: businessIdString,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
         business_id: user.business_id,
+        businessId: businessIdString,
       },
     };
   }

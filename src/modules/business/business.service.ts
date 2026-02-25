@@ -48,7 +48,6 @@ export class BusinessService {
 
   public async updateBusiness(
     id: number,
-    businessId: number,
     data: {
       name?: string;
       brand_name?: string | null;
@@ -67,7 +66,7 @@ export class BusinessService {
     return business;
   }
 
-  public async deleteBusiness(id: number, businessId: number, userRole: UserRole) {
+  public async deleteBusiness(id: number, userRole: UserRole) {
     // Solo ADMIN puede eliminar business
     if (userRole !== UserRole.ADMIN) {
       throw new AppError('Only ADMIN can delete business', 403);

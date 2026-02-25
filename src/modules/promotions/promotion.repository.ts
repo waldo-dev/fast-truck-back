@@ -1,12 +1,12 @@
 import { Op } from 'sequelize';
-import { Promotion, PromotionProduct, Product } from '../../shared/database/models';
+import { Promotion, PromotionProduct, Product, PromotionBusiness, Business } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 import { DiscountType } from '../../shared/database/models/enums';
 
 export class PromotionRepository {
   public async findAll(businessId: number, filters?: { active?: boolean }) {
     const where: any = {
-      business_id: businessId,
+      [Op.or]: [{ business_id: businessId }, { '$businesses.id$': businessId }],
     };
 
     if (filters?.active !== undefined) {
@@ -24,18 +24,57 @@ export class PromotionRepository {
             attributes: [],
           },
         },
+        {
+          model: Business,
+          as: 'businesses',
+          attributes: ['id', 'name'],
+          through: { attributes: [] },
+          required: false,
+        },
       ],
-      order: [['start_date', 'DESC'], ['created_at', 'DESC']],
+      order: [['start_date', 'DESC'], ['id', 'DESC']],
     });
 
     return promotions;
+  }
+
+  public async findAllByBusinessIds(businessIds: number[], filters?: { active?: boolean }) {
+    const where: any = {
+      [Op.or]: [{ business_id: { [Op.in]: businessIds } }, { '$businesses.id$': { [Op.in]: businessIds } }],
+    };
+
+    if (filters?.active !== undefined) {
+      where.active = filters.active;
+    }
+
+    return Promotion.findAll({
+      where,
+      include: [
+        {
+          model: Product,
+          as: 'products',
+          attributes: ['id', 'name', 'price', 'image_url'],
+          through: {
+            attributes: [],
+          },
+        },
+        {
+          model: Business,
+          as: 'businesses',
+          attributes: ['id', 'name'],
+          through: { attributes: [] },
+          required: false,
+        },
+      ],
+      order: [['start_date', 'DESC'], ['id', 'DESC']],
+    });
   }
 
   public async findById(id: number, businessId: number) {
     const promotion = await Promotion.findOne({
       where: {
         id,
-        business_id: businessId,
+        [Op.or]: [{ business_id: businessId }, { '$businesses.id$': businessId }],
       },
       include: [
         {
@@ -45,6 +84,13 @@ export class PromotionRepository {
           through: {
             attributes: [],
           },
+        },
+        {
+          model: Business,
+          as: 'businesses',
+          attributes: ['id', 'name'],
+          through: { attributes: [] },
+          required: false,
         },
       ],
     });
@@ -66,8 +112,9 @@ export class PromotionRepository {
     end_date?: Date | null;
     active?: boolean;
     product_ids?: number[];
+    business_ids?: number[];
   }) {
-    const { product_ids, ...promotionData } = data;
+    const { product_ids, business_ids, ...promotionData } = data;
 
     const promotion = await Promotion.create({
       ...promotionData,
@@ -76,16 +123,19 @@ export class PromotionRepository {
 
     // Asociar productos si se proporcionan
     if (product_ids && product_ids.length > 0) {
-      // Verificar que los productos pertenezcan al mismo business
+      const allowedBusinessIds =
+        business_ids && business_ids.length > 0 ? Array.from(new Set<number>(business_ids)) : [data.business_id];
+
+      // Verificar que los productos pertenezcan a alguno de los businesses asociados
       const products = await Product.findAll({
         where: {
           id: { [Op.in]: product_ids },
-          business_id: data.business_id,
+          business_id: { [Op.in]: allowedBusinessIds },
         },
       });
 
       if (products.length !== product_ids.length) {
-        throw new AppError('Some products do not exist or do not belong to this business', 400);
+        throw new AppError('Some products do not exist or do not belong to the provided businesses', 400);
       }
 
       await PromotionProduct.bulkCreate(
@@ -95,6 +145,22 @@ export class PromotionRepository {
         }))
       );
     }
+
+    // Asociar negocios si se proporcionan
+    const targetBusinesses =
+      business_ids && business_ids.length > 0 ? Array.from(new Set<number>(business_ids)) : [data.business_id];
+
+    if (!targetBusinesses.includes(data.business_id)) {
+      targetBusinesses.push(data.business_id);
+    }
+
+    await PromotionBusiness.bulkCreate(
+      targetBusinesses.map((businessId) => ({
+        promotion_id: promotion.id,
+        business_id: businessId,
+      })),
+      { ignoreDuplicates: true }
+    );
 
     return this.findById(promotion.id, data.business_id);
   }
@@ -111,11 +177,12 @@ export class PromotionRepository {
       end_date?: Date | null;
       active?: boolean;
       product_ids?: number[];
+      business_ids?: number[];
     }
   ) {
     const promotion = await this.findById(id, businessId);
 
-    const { product_ids, ...promotionData } = data;
+    const { product_ids, business_ids, ...promotionData } = data;
 
     await promotion.update(promotionData);
 
@@ -147,6 +214,26 @@ export class PromotionRepository {
             promotion_id: id,
             product_id: productId,
           }))
+        );
+      }
+    }
+
+    // Actualizar negocios asociados si se proporcionan
+    if (business_ids !== undefined) {
+      const targetBusinesses = Array.from(new Set<number>(business_ids));
+
+      // limpiar asociaciones previas
+      await PromotionBusiness.destroy({
+        where: { promotion_id: id },
+      });
+
+      if (targetBusinesses.length > 0) {
+        await PromotionBusiness.bulkCreate(
+          targetBusinesses.map((businessId) => ({
+            promotion_id: id,
+            business_id: businessId,
+          })),
+          { ignoreDuplicates: true }
         );
       }
     }

@@ -17,6 +17,7 @@ import { ProductOptionRecipe } from './ProductOptionRecipe';
 import { ProductRecipe } from './ProductRecipe';
 import { Promotion } from './Promotion';
 import { PromotionProduct } from './PromotionProduct';
+import { PromotionBusiness } from './PromotionBusiness';
 import { User } from './User';
 import { UserBusiness } from './UserBusiness';
 import { ProductBusiness } from './ProductBusiness';
@@ -127,6 +128,12 @@ export const initializeAssociations = (): void => {
   // Promotion relations
   Promotion.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
   Promotion.belongsToMany(Product, { through: PromotionProduct, foreignKey: 'promotion_id', as: 'products' });
+  Promotion.belongsToMany(Business, {
+    through: PromotionBusiness,
+    foreignKey: 'promotion_id',
+    otherKey: 'business_id',
+    as: 'businesses',
+  });
 
   // PromotionProduct relations
   PromotionProduct.belongsTo(Promotion, { foreignKey: 'promotion_id', as: 'promotion' });
@@ -150,4 +157,15 @@ export const initializeAssociations = (): void => {
     as: 'linkedProducts',
   });
   Business.hasMany(ProductBusiness, { foreignKey: 'business_id', as: 'productBusinesses' });
+
+  // PromotionBusiness relations (enlace promoción-negocio)
+  PromotionBusiness.belongsTo(Promotion, { foreignKey: 'promotion_id', as: 'promotion' });
+  PromotionBusiness.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
+  Business.belongsToMany(Promotion, {
+    through: PromotionBusiness,
+    foreignKey: 'business_id',
+    otherKey: 'promotion_id',
+    as: 'promotionsLinked',
+  });
+  Business.hasMany(PromotionBusiness, { foreignKey: 'business_id', as: 'promotionBusinesses' });
 };

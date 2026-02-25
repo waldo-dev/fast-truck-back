@@ -18,6 +18,7 @@ import { ProductRecipe } from './ProductRecipe';
 import { Promotion } from './Promotion';
 import { PromotionProduct } from './PromotionProduct';
 import { ProductBusiness } from './ProductBusiness';
+import { PromotionBusiness } from './PromotionBusiness';
 import { User } from './User';
 import { Otp } from './Otp';
 import { PaymentConfig } from './PaymentConfig';
@@ -48,6 +49,7 @@ export {
   ProductRecipe,
   Promotion,
   PromotionProduct,
+  PromotionBusiness,
   ProductBusiness,
   User,
   UserBusiness,

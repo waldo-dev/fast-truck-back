@@ -4,6 +4,19 @@ import { productRepository } from './product.repository';
 import { UserBusiness } from '../../shared/database/models';
 
 export class ProductService {
+  private async ensureOwnerAccess(userRole: UserRole, userId: number | undefined, businessId: number) {
+    if (userRole !== UserRole.BUSINESS_OWNER) return;
+    if (!userId) {
+      throw new AppError('User ID is required', 400);
+    }
+    const link = await UserBusiness.findOne({
+      where: { user_id: userId, business_id: businessId },
+      attributes: ['business_id'],
+    });
+    if (!link) {
+      throw new AppError('Business not associated to this owner', 403);
+    }
+  }
   public async bulkCreate(
     businessIds: number[],
     data: {
@@ -127,12 +140,15 @@ export class ProductService {
       }>;
     },
     businessId: number,
-    userRole: UserRole
+    userRole: UserRole,
+    userId: number
   ) {
-    // Solo ADMIN puede crear productos
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can create products', 403);
+    // ADMIN o BUSINESS_OWNER
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can create products', 403);
     }
+
+    await this.ensureOwnerAccess(userRole, userId, businessId);
 
     const product = await productRepository.create({
       ...data,
@@ -159,12 +175,14 @@ export class ProductService {
         extra_price?: number;
       }>;
     },
-    userRole: UserRole
+    userRole: UserRole,
+    userId: number
   ) {
-    // Solo ADMIN puede actualizar productos
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can update products', 403);
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can update products', 403);
     }
+
+    await this.ensureOwnerAccess(userRole, userId, businessId);
 
     const product = await productRepository.update(id, businessId, data);
     return product;
@@ -179,22 +197,25 @@ export class ProductService {
     id: number,
     businessId: number,
     status: ProductStatus,
-    userRole: UserRole
+    userRole: UserRole,
+    userId: number
   ) {
-    // Solo ADMIN puede activar/desactivar productos
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can toggle product status', 403);
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can toggle product status', 403);
     }
+
+    await this.ensureOwnerAccess(userRole, userId, businessId);
 
     const product = await productRepository.toggleStatus(id, businessId, status);
     return product;
   }
 
-  public async deleteProduct(id: number, businessId: number, userRole: UserRole) {
-    // Solo ADMIN puede eliminar productos
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can delete products', 403);
+  public async deleteProduct(id: number, businessId: number, userRole: UserRole, userId: number) {
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can delete products', 403);
     }
+
+    await this.ensureOwnerAccess(userRole, userId, businessId);
 
     await productRepository.delete(id, businessId);
   }

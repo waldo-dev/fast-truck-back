@@ -44,11 +44,12 @@ router.use(injectBusinessId);
 
 // GET /products - Listar productos (ADMIN y LOCAL_OPERATOR pueden leer)
 // Query params: category_id, status
-router.get('/', productController.getAll);
+router.get('/', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR), productController.getAll);
 
 // GET /products/:id - Obtener producto por ID (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get(
   '/:id',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
   validateParams(productParamsSchema),
   productController.getById
 );
@@ -56,7 +57,7 @@ router.get(
 // POST /products - Crear producto (solo ADMIN)
 router.post(
   '/',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
   upload.single('image'),
   validate(createProductSchema),
   productController.create
@@ -65,7 +66,7 @@ router.post(
 // PUT /products/:id - Actualizar producto (solo ADMIN)
 router.put(
   '/:id',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
   validateParams(productParamsSchema),
   upload.single('image'),
   validate(updateProductSchema),
@@ -75,7 +76,7 @@ router.put(
 // PATCH /products/:id/status - Activar/desactivar producto (solo ADMIN)
 router.patch(
   '/:id/status',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
   validateParams(productParamsSchema),
   validate(toggleProductStatusSchema),
   productController.toggleStatus
@@ -84,7 +85,7 @@ router.patch(
 // DELETE /products/:id - Eliminar producto (solo ADMIN)
 router.delete(
   '/:id',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
   validateParams(productParamsSchema),
   productController.delete
 );

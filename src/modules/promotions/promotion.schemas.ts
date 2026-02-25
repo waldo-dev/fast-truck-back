@@ -13,6 +13,10 @@ export const createPromotionSchema = z
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format').optional().nullable(),
     active: z.boolean().optional(),
     product_ids: z.array(z.number().int().positive('Product ID must be a positive integer')).min(1, 'At least one product is required').optional(),
+    business_ids: z
+      .array(z.number().int().positive('Business ID must be a positive integer'))
+      .min(1, 'At least one business is required')
+      .optional(),
   })
   .refine(
     (data) => {
@@ -49,6 +53,7 @@ export const updatePromotionSchema = z
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format').optional().nullable(),
     active: z.boolean().optional(),
     product_ids: z.array(z.number().int().positive('Product ID must be a positive integer')).optional(),
+    business_ids: z.array(z.number().int().positive('Business ID must be a positive integer')).optional(),
   })
   .refine(
     (data) => {

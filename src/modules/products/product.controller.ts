@@ -257,7 +257,8 @@ export class ProductController {
           options,
         },
         req.business_id,
-        req.user.role as UserRole
+        req.user.role as UserRole,
+        req.user.id
       );
 
       let productWithImage = product;
@@ -316,7 +317,8 @@ export class ProductController {
           status,
           options,
         },
-        req.user.role as UserRole
+        req.user.role as UserRole,
+        req.user.id
       );
 
       let productWithImage = product;
@@ -375,7 +377,8 @@ export class ProductController {
         id,
         req.business_id,
         status,
-        req.user.role as UserRole
+        req.user.role as UserRole,
+        req.user.id
       );
 
       res.status(200).json({
@@ -411,7 +414,7 @@ export class ProductController {
         return;
       }
 
-      await productService.deleteProduct(id, req.business_id, req.user.role as UserRole);
+      await productService.deleteProduct(id, req.business_id, req.user.role as UserRole, req.user.id);
 
       res.status(200).json({
         success: true,

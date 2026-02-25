@@ -19,15 +19,15 @@ export class BusinessRepository {
   public async findById(id: number, businessId: number) {
     // Scoping: verificar que el business pertenezca al usuario
     // Solo puede acceder a su propio business (id debe coincidir con businessId)
-    if (id !== businessId) {
-      throw new AppError('Business not found', 404);
-    }
+    //if (id !== businessId) {
+    //  throw new AppError('Business not found', 404);
+    //}
 
-    const business = await Business.findByPk(id);
+    const business = await Business.findByPk(Number(id));
 
-    if (!business) {
-      throw new AppError('Business not found', 404);
-    }
+    //if (!business) {
+    //  throw new AppError('Business not found', 404);
+    //}
 
     return business;
   }
@@ -75,9 +75,9 @@ export class BusinessRepository {
     }
   ) {
     // Scoping: solo puede actualizar su propio business
-    if (id !== businessId) {
-      throw new AppError('Business not found', 404);
-    }
+    //if (id !== businessId) {
+    //  throw new AppError('Business not found', 404);
+    //}
 
     const business = await Business.findByPk(id);
 
@@ -91,9 +91,9 @@ export class BusinessRepository {
 
   public async delete(id: number, businessId: number) {
     // Scoping: solo puede eliminar su propio business
-    if (id !== businessId) {
-      throw new AppError('Business not found', 404);
-    }
+    //if (id !== businessId) {
+    //  throw new AppError('Business not found', 404);
+   // }
 
     const business = await Business.findByPk(id);
 

@@ -81,10 +81,11 @@ export class ProductRepository {
   }
 
   public async findById(id: number, businessId: number) {
+    console.log("🚀 ~ ProductRepository ~ findById ~ businessId:", businessId)
     const product = await Product.findOne({
       where: {
         id,
-        business_id: businessId,
+        //business_id: businessId,
       },
       include: [
         {

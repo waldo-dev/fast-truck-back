@@ -34,6 +34,48 @@ export class PromotionController {
     }
   };
 
+  public getByBusinessIds = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'User is required' },
+        });
+        return;
+      }
+
+      const businessIdsParam = req.query.business_ids;
+      let businessIds: number[] | undefined;
+
+      if (typeof businessIdsParam === 'string') {
+        businessIds = businessIdsParam
+          .split(',')
+          .map((v) => parseInt(v.trim(), 10))
+          .filter((n) => !isNaN(n));
+      } else if (Array.isArray(businessIdsParam)) {
+        businessIds = businessIdsParam
+          .map((v) => (typeof v === 'string' ? parseInt(v, 10) : Number(v)))
+          .filter((n) => !isNaN(n));
+      }
+
+      const active = req.query.active === 'true' ? true : req.query.active === 'false' ? false : undefined;
+      const promotions = await promotionService.getPromotionsByBusinessIds(
+        req.user.id,
+        req.user.role as UserRole,
+        businessIds,
+        req.business_id,
+        { active }
+      );
+
+      res.status(200).json({
+        success: true,
+        data: promotions,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public getById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.business_id) {
@@ -81,8 +123,17 @@ export class PromotionController {
         return;
       }
 
-      const { name, description, discount_type, discount_value, start_date, end_date, active, product_ids } =
-        req.body;
+      const {
+        name,
+        description,
+        discount_type,
+        discount_value,
+        start_date,
+        end_date,
+        active,
+        product_ids,
+        business_ids,
+      } = req.body;
 
       const promotion = await promotionService.createPromotion(
         {
@@ -94,9 +145,11 @@ export class PromotionController {
           end_date,
           active,
           product_ids,
+          business_ids,
         },
         req.business_id,
-        req.user.role as UserRole
+        req.user.role as UserRole,
+        req.user.id
       );
 
       res.status(201).json({
@@ -132,8 +185,17 @@ export class PromotionController {
         return;
       }
 
-      const { name, description, discount_type, discount_value, start_date, end_date, active, product_ids } =
-        req.body;
+      const {
+        name,
+        description,
+        discount_type,
+        discount_value,
+        start_date,
+        end_date,
+        active,
+        product_ids,
+        business_ids,
+      } = req.body;
 
       const promotion = await promotionService.updatePromotion(
         id,
@@ -147,8 +209,10 @@ export class PromotionController {
           end_date,
           active,
           product_ids,
+          business_ids,
         },
-        req.user.role as UserRole
+        req.user.role as UserRole,
+        req.user.id
       );
 
       res.status(200).json({

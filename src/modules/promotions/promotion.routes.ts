@@ -17,11 +17,11 @@ const router = Router();
 router.use(authenticate);
 router.use(injectBusinessId);
 
-// GET /promotions - Listar promociones (ADMIN y STAFF pueden leer)
+// GET /promotions - Listar promociones (ADMIN y LOCAL_OPERATOR pueden leer)
 // Query params: active (true/false)
 router.get('/', promotionController.getAll);
 
-// GET /promotions/:id - Obtener promoción por ID (ADMIN y STAFF pueden leer)
+// GET /promotions/:id - Obtener promoción por ID (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/:id', validateParams(promotionParamsSchema), promotionController.getById);
 
 // POST /promotions - Crear promoción (solo ADMIN)

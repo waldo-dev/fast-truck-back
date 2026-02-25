@@ -1,4 +1,4 @@
-import { Business } from '../../shared/database/models';
+import { Business, UserBusiness } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 import { User } from '../../shared/database/models';
 
@@ -9,6 +9,11 @@ export class BusinessRepository {
       where: { id: businessId },
     });
 
+    return business;
+  }
+
+  public async findAllAdmin() {
+    const business = await Business.findAll();
     return business;
   }
 
@@ -29,19 +34,23 @@ export class BusinessRepository {
   }
 
   public async findByUser(userId: number) {
-    const businesses = await Business.findAll({
-      include: [
-        {
-          model: User,
-          as: 'members',
-          through: { attributes: [] },
-          where: { id: userId },
-          attributes: [],
-        },
-      ],
+    // Buscar business vinculados vía tabla intermedia user_business
+    const links = await UserBusiness.findAll({
+      where: { user_id: userId },
+      attributes: ['business_id'],
     });
+    console.log("🚀 ~ BusinessRepository ~ findByUser ~ links:", links)
 
-    return businesses;
+    const businessIds = Array.from(new Set(links.map((l) => l.business_id).filter(Boolean)));
+    console.log("🚀 ~ BusinessRepository ~ findByUser ~ businessIds:", businessIds)
+
+    if (businessIds.length === 0) {
+      return [];
+    }
+
+    return Business.findAll({
+      where: { id: businessIds },
+    });
   }
 
   public async create(data: {

@@ -51,8 +51,8 @@ export enum ProductStatus {
 
 export enum UserRole {
   ADMIN = 'ADMIN',
-  STAFF = 'STAFF',
   BUSINESS_OWNER = 'BUSINESS_OWNER',
+  LOCAL_OPERATOR = 'LOCAL_OPERATOR',
 }
 
 export enum DiscountType {

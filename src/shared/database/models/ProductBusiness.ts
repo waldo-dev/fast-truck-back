@@ -3,8 +3,8 @@ import { sequelize } from '../connection';
 
 interface ProductBusinessAttributes {
   id: number;
-  user_id: number;
-  business_id: number;
+  product_id: number | null;
+  business_id: number | null;
 }
 
 interface ProductBusinessCreationAttributes extends Optional<ProductBusinessAttributes, 'id'> {}
@@ -14,8 +14,8 @@ export class ProductBusiness
   implements ProductBusinessAttributes
 {
   public id!: number;
-  public user_id!: number;
-  public business_id!: number;
+  public product_id!: number | null;
+  public business_id!: number | null;
 }
 
 ProductBusiness.init(
@@ -25,13 +25,13 @@ ProductBusiness.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    user_id: {
+    product_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     business_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
   },
   {

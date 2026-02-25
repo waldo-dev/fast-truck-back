@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
-import { User } from '../../shared/database/models';
+import { Op } from 'sequelize';
+import { User, UserBusiness } from '../../shared/database/models';
 import { UserRole } from '../../shared/database/models/enums';
 import { AppError } from '../../shared/errors';
 
@@ -43,6 +44,38 @@ export class UserRepository {
     return user;
   }
 
+  public async findAllByBusiness(businessId: number) {
+    const links = await UserBusiness.findAll({
+      where: { business_id: businessId },
+      attributes: ['user_id'],
+    });
+
+    const linkedUserIds = Array.from(new Set(links.map((link) => link.user_id)));
+
+    const users = await User.findAll({
+      where: {
+        [Op.or]: [
+          { business_id: businessId },
+          ...(linkedUserIds.length > 0 ? [{ id: { [Op.in]: linkedUserIds } }] : []),
+        ],
+      },
+      attributes: ['id', 'email', 'name', 'role', 'active', 'business_id', 'created_at'],
+      order: [['created_at', 'DESC']],
+    });
+
+    return users;
+  }
+
+  public async findAdminsAndOwners() {
+    return User.findAll({
+      where: {
+        role: { [Op.in]: [UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR] },
+      },
+      attributes: ['id', 'email', 'name', 'role', 'active', 'business_id', 'created_at'],
+      order: [['created_at', 'DESC']],
+    });
+  }
+
   public async create(data: {
     business_id: number;
     email: string;
@@ -79,6 +112,7 @@ export class UserRepository {
       email?: string;
       role?: UserRole;
       active?: boolean;
+      business_id?: number;
     }
   ) {
     const user = await this.findById(id, businessId);
@@ -99,6 +133,20 @@ export class UserRepository {
     const user = await this.findById(id, businessId);
     await user.update({ active: false });
     return user.reload();
+  }
+
+  public async setBusinessLinks(userId: number, businessIds: number[]) {
+    const uniqueIds = Array.from(new Set(businessIds));
+
+    // Eliminar asociaciones previas
+    await UserBusiness.destroy({ where: { user_id: userId } });
+
+    if (uniqueIds.length === 0) {
+      return;
+    }
+
+    // Crear asociaciones nuevas
+    await UserBusiness.bulkCreate(uniqueIds.map((businessId) => ({ user_id: userId, business_id: businessId })));
   }
 }
 

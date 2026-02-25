@@ -10,7 +10,7 @@ const router = Router();
 router.use(authenticate);
 router.use(injectBusinessId);
 
-// GET /locations - Listar locales (ADMIN y STAFF pueden leer)
+// GET /locations - Listar locales (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/', locationController.getAll);
 
 // POST /locations - Crear local (solo ADMIN)

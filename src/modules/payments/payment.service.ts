@@ -17,9 +17,9 @@ export class PaymentService {
     businessId: number,
     userRole: UserRole
   ) {
-    // ADMIN y STAFF pueden registrar pagos manuales
-    if (userRole !== UserRole.ADMIN && userRole !== UserRole.STAFF) {
-      throw new AppError('Only ADMIN and STAFF can create payments', 403);
+    // ADMIN y LOCAL_OPERATOR pueden registrar pagos manuales
+    if (userRole !== UserRole.ADMIN && userRole !== UserRole.LOCAL_OPERATOR) {
+      throw new AppError('Only ADMIN and LOCAL_OPERATOR can create payments', 403);
     }
 
     const payment = await paymentRepository.create({

@@ -9,10 +9,10 @@ const router = Router();
 router.use(authenticate);
 router.use(injectBusinessId);
 
-// POST /payments - Registrar pago manual (ADMIN y STAFF)
+// POST /payments - Registrar pago manual (ADMIN y LOCAL_OPERATOR)
 router.post('/', validate(createPaymentSchema), paymentController.create);
 
-// GET /payments/:orderId - Pagos de un pedido (ADMIN y STAFF)
+// GET /payments/:orderId - Pagos de un pedido (ADMIN y LOCAL_OPERATOR)
 router.get('/:orderId', validateParams(paymentParamsSchema), paymentController.getByOrder);
 
 export default router;

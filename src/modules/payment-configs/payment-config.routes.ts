@@ -10,7 +10,7 @@ const router = Router();
 router.use(authenticate);
 router.use(injectBusinessId);
 
-// GET /payment-configs - Obtener configuración activa (ADMIN y STAFF)
+// GET /payment-configs - Obtener configuración activa (ADMIN y LOCAL_OPERATOR)
 router.get('/', paymentConfigController.getAll);
 
 // POST /payment-configs - Configurar proveedor (solo ADMIN)

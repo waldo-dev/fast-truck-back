@@ -10,15 +10,15 @@ const router = Router();
 router.use(authenticate);
 router.use(injectBusinessId);
 
-// GET /orders - Listar pedidos (ADMIN y STAFF pueden leer)
+// GET /orders - Listar pedidos (ADMIN y LOCAL_OPERATOR pueden leer)
 // Query params: status, order_source, customer_id
 router.get('/', orderController.getAll);
 
-// GET /orders/:id - Obtener pedido por ID (ADMIN y STAFF pueden leer)
+// GET /orders/:id - Obtener pedido por ID (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/:id', validateParams(orderParamsSchema), orderController.getById);
 
 // POST /orders - Crear pedido
-// ADMIN puede crear cualquier tipo, STAFF solo WHATSAPP
+// ADMIN puede crear cualquier tipo, LOCAL_OPERATOR solo WHATSAPP
 router.post('/', validate(createOrderSchema), orderController.create);
 
 // PATCH /orders/:id/status - Actualizar estado del pedido (solo ADMIN)

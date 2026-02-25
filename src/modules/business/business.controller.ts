@@ -18,7 +18,10 @@ export class BusinessController {
         return;
       }
 
-      const business = await businessService.getBusinessesForUser(req.user.id);
+      const business =
+        req.user.role === UserRole.ADMIN
+        ? await businessService.getAllBusinessesAdmin()
+        : await businessService.getBusinessesForUser(req.user.id);
 
       res.status(200).json({
         success: true,

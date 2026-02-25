@@ -26,7 +26,7 @@ router.use(authenticate);
 // Rutas para BUSINESS_OWNER con múltiples negocios (sin business_id inyectado)
 router.get(
   '/owner',
-  authorize(UserRole.BUSINESS_OWNER),
+  authorize(UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
   productController.getByOwner
 );
 
@@ -39,14 +39,14 @@ router.post(
   productController.bulkCreate
 );
 
-// Rutas que requieren business_id (ADMIN/STAFF scoping)
+// Rutas que requieren business_id (ADMIN/LOCAL_OPERATOR scoping)
 router.use(injectBusinessId);
 
-// GET /products - Listar productos (ADMIN y STAFF pueden leer)
+// GET /products - Listar productos (ADMIN y LOCAL_OPERATOR pueden leer)
 // Query params: category_id, status
 router.get('/', productController.getAll);
 
-// GET /products/:id - Obtener producto por ID (ADMIN y STAFF pueden leer)
+// GET /products/:id - Obtener producto por ID (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get(
   '/:id',
   validateParams(productParamsSchema),

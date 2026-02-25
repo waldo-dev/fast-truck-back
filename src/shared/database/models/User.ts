@@ -54,7 +54,7 @@ User.init(
     role: {
       type: DataTypes.ENUM(...Object.values(UserRole)),
       allowNull: false,
-      defaultValue: UserRole.STAFF,
+      defaultValue: UserRole.LOCAL_OPERATOR,
     },
     business_id: {
       type: DataTypes.INTEGER,

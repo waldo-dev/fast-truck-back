@@ -14,7 +14,7 @@ router.use(injectBusinessId);
 // GET /business - Listar business asociados al usuario autenticado
 router.get('/', businessController.getAll);
 
-// GET /business/:id - Obtener business por ID (ADMIN y STAFF pueden leer)
+// GET /business/:id - Obtener business por ID (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/:id', businessController.getById);
 
 // POST /business - Crear business (solo ADMIN)

@@ -15,13 +15,13 @@ router.get('/owner', authorize(UserRole.BUSINESS_OWNER), categoryController.getB
 // Bulk create para múltiples negocios (ADMIN o BUSINESS_OWNER con pertenencia)
 router.post('/bulk', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER), validate(bulkCreateCategorySchema), categoryController.bulkCreate);
 
-// Rutas que requieren business_id (ADMIN/STAFF scoping)
+// Rutas que requieren business_id (ADMIN/LOCAL_OPERATOR scoping)
 router.use(injectBusinessId);
 
-// GET /categories - Listar categorías (ADMIN y STAFF pueden leer)
+// GET /categories - Listar categorías (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/', categoryController.getAll);
 
-// GET /categories/:id - Obtener categoría por ID (ADMIN y STAFF pueden leer)
+// GET /categories/:id - Obtener categoría por ID (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/:id', validateParams(categoryParamsSchema), categoryController.getById);
 
 // POST /categories - Crear categoría (solo ADMIN)

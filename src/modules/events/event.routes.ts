@@ -10,11 +10,11 @@ const router = Router();
 router.use(authenticate);
 router.use(injectBusinessId);
 
-// GET /events - Listar eventos (ADMIN y STAFF pueden leer)
+// GET /events - Listar eventos (ADMIN y LOCAL_OPERATOR pueden leer)
 // Query param: future=true para solo eventos futuros
 router.get('/', eventController.getAll);
 
-// GET /events/:id - Detalle evento (ADMIN y STAFF pueden leer)
+// GET /events/:id - Detalle evento (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/:id', validateParams(eventParamsSchema), eventController.getById);
 
 // POST /events - Crear evento (solo ADMIN)

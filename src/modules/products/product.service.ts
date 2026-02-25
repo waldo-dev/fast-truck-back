@@ -1,7 +1,7 @@
 import { AppError } from '../../shared/errors';
 import { UserRole, ProductStatus } from '../../shared/database/models/enums';
 import { productRepository } from './product.repository';
-import { ProductBusiness, UserBusiness } from '../../shared/database/models';
+import { UserBusiness } from '../../shared/database/models';
 
 export class ProductService {
   public async bulkCreate(
@@ -56,12 +56,6 @@ export class ProductService {
           business_id: businessId,
         });
 
-        // Asociar producto al negocio para el owner (si aún no existe)
-        await ProductBusiness.findOrCreate({
-          where: { user_id: userId, business_id: businessId },
-          defaults: { user_id: userId, business_id: businessId },
-        });
-
         results.push({ business_id: businessId, product });
       } catch (err: any) {
         results.push({
@@ -85,8 +79,8 @@ export class ProductService {
     filters?: { category_id?: number; status?: ProductStatus },
     businessId?: number
   ) {
-    if (userRole !== UserRole.BUSINESS_OWNER) {
-      throw new AppError('Only BUSINESS_OWNER can access this resource', 403);
+    if (![UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR].includes(userRole)) {
+      throw new AppError('Only BUSINESS_OWNER or LOCAL_OPERATOR can access this resource', 403);
     }
 
     const businessLinks = await UserBusiness.findAll({
@@ -104,7 +98,7 @@ export class ProductService {
 
     if (businessId) {
       if (!businessIds.includes(businessId)) {
-        throw new AppError('Business not associated to this owner', 403);
+        throw new AppError('Business not associated to this user', 403);
       }
       targetBusinessIds = [businessId];
     }
@@ -144,12 +138,6 @@ export class ProductService {
     const product = await productRepository.create({
       ...data,
       business_id: businessId,
-    });
-
-    // Asociar producto al negocio para el owner (si aún no existe)
-    await ProductBusiness.findOrCreate({
-      where: { user_id: userId, business_id: businessId },
-      defaults: { user_id: userId, business_id: businessId },
     });
 
     return product;

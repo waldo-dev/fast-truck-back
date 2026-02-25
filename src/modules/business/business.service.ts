@@ -5,8 +5,11 @@ import { UserBusiness } from '../../shared/database/models/UserBusiness';
 
 export class BusinessService {
   public async getAllbusiness(businessId: number) {
-    const business = await businessRepository.findAll(businessId);
-    return business;
+    return businessRepository.findAll(businessId);
+  }
+
+  public async getAllBusinessesAdmin() {
+    return businessRepository.findAllAdmin();
   }
 
   public async getBusinessesForUser(userId: number) {

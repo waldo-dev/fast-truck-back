@@ -34,9 +34,9 @@ export class OrderService {
     businessId: number,
     userRole: UserRole
   ) {
-    // Validar permisos: Staff solo puede crear pedidos WHATSAPP
-    if (userRole === UserRole.STAFF && data.order_source !== OrderSource.WHATSAPP) {
-      throw new AppError('STAFF can only create WHATSAPP orders', 403);
+    // Validar permisos: LOCAL_OPERATOR solo puede crear pedidos WHATSAPP
+    if (userRole === UserRole.LOCAL_OPERATOR && data.order_source !== OrderSource.WHATSAPP) {
+      throw new AppError('LOCAL_OPERATOR can only create WHATSAPP orders', 403);
     }
 
     const order = await orderRepository.create({

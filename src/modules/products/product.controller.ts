@@ -257,8 +257,7 @@ export class ProductController {
           options,
         },
         req.business_id,
-        req.user.role as UserRole,
-        req.user.id
+        req.user.role as UserRole
       );
 
       let productWithImage = product;

@@ -20,6 +20,7 @@ import { PromotionProduct } from './PromotionProduct';
 import { User } from './User';
 import { Otp } from './Otp';
 import { PaymentConfig } from './PaymentConfig';
+import { UserBusiness } from './UserBusiness';
 
 // Inicializar relaciones
 const initializeRelations = (): void => {
@@ -124,6 +125,10 @@ const initializeRelations = (): void => {
   User.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
   Business.hasMany(User, { foreignKey: 'business_id', as: 'users' });
 
+  // User-Business (many-to-many) relations
+  User.belongsToMany(Business, { through: UserBusiness, foreignKey: 'user_id', as: 'businesses' });
+  Business.belongsToMany(User, { through: UserBusiness, foreignKey: 'business_id', as: 'members' });
+
   // PaymentConfig relations
   PaymentConfig.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
   Business.hasMany(PaymentConfig, { foreignKey: 'business_id', as: 'paymentConfigs' });
@@ -154,6 +159,7 @@ export {
   Promotion,
   PromotionProduct,
   User,
+  UserBusiness,
 };
 
 export default sequelize;

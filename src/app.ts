@@ -50,7 +50,7 @@ const createApp = (): Application => {
   // Routes
   app.use('/', healthRoutes);
   app.use('/auth', authRoutes);
-  app.use('/businesses', businessRoutes);
+  app.use('/business', businessRoutes);
   app.use('/users', userRoutes);
   app.use('/customers', customerRoutes);
   app.use('/categories', categoryRoutes);

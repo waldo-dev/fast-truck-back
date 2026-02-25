@@ -1,14 +1,15 @@
 import { Business } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
+import { User } from '../../shared/database/models';
 
 export class BusinessRepository {
   public async findAll(businessId: number) {
     // Scoping: solo retornar el business del usuario autenticado
-    const businesses = await Business.findAll({
+    const business = await Business.findAll({
       where: { id: businessId },
     });
 
-    return businesses;
+    return business;
   }
 
   public async findById(id: number, businessId: number) {
@@ -25,6 +26,22 @@ export class BusinessRepository {
     }
 
     return business;
+  }
+
+  public async findByUser(userId: number) {
+    const businesses = await Business.findAll({
+      include: [
+        {
+          model: User,
+          as: 'members',
+          through: { attributes: [] },
+          where: { id: userId },
+          attributes: [],
+        },
+      ],
+    });
+
+    return businesses;
   }
 
   public async create(data: {

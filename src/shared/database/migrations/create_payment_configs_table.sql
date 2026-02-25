@@ -14,7 +14,7 @@ CREATE TYPE public.payment_environment AS ENUM (
 -- Crear tabla payment_configs
 CREATE TABLE IF NOT EXISTS public.payment_configs (
   id SERIAL PRIMARY KEY,
-  business_id INT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  business_id INT NOT NULL REFERENCES business(id) ON DELETE CASCADE,
   provider public.payment_provider NOT NULL,
   commerce_code VARCHAR(50) NOT NULL,
   api_key TEXT NOT NULL,

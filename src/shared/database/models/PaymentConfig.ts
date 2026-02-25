@@ -39,7 +39,7 @@ PaymentConfig.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'businesses',
+        model: 'business',
         key: 'id',
       },
       onDelete: 'CASCADE',

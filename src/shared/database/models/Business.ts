@@ -58,7 +58,7 @@ Business.init(
   },
   {
     sequelize,
-    tableName: 'businesses',
+    tableName: 'business',
     timestamps: false,
   }
 );

@@ -1,11 +1,16 @@
 import { AppError } from '../../shared/errors';
 import { UserRole } from '../../shared/database/models/enums';
 import { businessRepository } from './business.repository';
+import { UserBusiness } from '../../shared/database/models/UserBusiness';
 
 export class BusinessService {
-  public async getAllBusinesses(businessId: number) {
-    const businesses = await businessRepository.findAll(businessId);
-    return businesses;
+  public async getAllbusiness(businessId: number) {
+    const business = await businessRepository.findAll(businessId);
+    return business;
+  }
+
+  public async getBusinessesForUser(userId: number) {
+    return businessRepository.findByUser(userId);
   }
 
   public async getBusinessById(id: number, businessId: number) {
@@ -21,14 +26,18 @@ export class BusinessService {
       primary_color?: string | null;
       secondary_color?: string | null;
     },
-    userRole: UserRole
+    userRole: UserRole,
+    userId: number
   ) {
-    // Solo ADMIN puede crear businesses
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can create businesses', 403);
+    // Permitir ADMIN o BUSINESS_OWNER
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can create business', 403);
     }
 
     const business = await businessRepository.create(data);
+
+    // Asociar al usuario creador en la tabla intermedia
+    await UserBusiness.create({ user_id: userId, business_id: business.id });
     return business;
   }
 
@@ -44,9 +53,9 @@ export class BusinessService {
     },
     userRole: UserRole
   ) {
-    // Solo ADMIN puede actualizar businesses
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can update businesses', 403);
+    // Permitir ADMIN o BUSINESS_OWNER
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can update business', 403);
     }
 
     const business = await businessRepository.update(id, businessId, data);
@@ -54,9 +63,9 @@ export class BusinessService {
   }
 
   public async deleteBusiness(id: number, businessId: number, userRole: UserRole) {
-    // Solo ADMIN puede eliminar businesses
+    // Solo ADMIN puede eliminar business
     if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can delete businesses', 403);
+      throw new AppError('Only ADMIN can delete business', 403);
     }
 
     await businessRepository.delete(id, businessId);

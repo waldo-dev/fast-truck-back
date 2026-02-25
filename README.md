@@ -161,7 +161,7 @@ El proyecto utiliza **Sequelize** como ORM para interactuar con PostgreSQL. Todo
 import { Business, Product, Order } from './shared/database/models';
 
 // Ejemplo de uso en un repository
-const businesses = await Business.findAll();
+const business = await Business.findAll();
 const products = await Product.findAll({ where: { status: 'ACTIVE' } });
 ```
 

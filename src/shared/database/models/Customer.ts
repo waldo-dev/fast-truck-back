@@ -32,7 +32,7 @@ Customer.init(
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: 'businesses',
+        model: 'business',
         key: 'id',
       },
     },

@@ -6,7 +6,7 @@ ADD COLUMN IF NOT EXISTS business_id INTEGER;
 ALTER TABLE public.users
 ADD CONSTRAINT users_business_id_fkey 
 FOREIGN KEY (business_id) 
-REFERENCES public.businesses(id);
+REFERENCES public.business(id);
 
 -- Crear índice para búsquedas rápidas
 CREATE INDEX IF NOT EXISTS idx_users_business_id ON public.users(business_id);

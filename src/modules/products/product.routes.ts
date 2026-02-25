@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate, validateParams } from '../../shared/middlewares';
+import multer from 'multer';
+import {
+  authenticate,
+  authorize,
+  injectBusinessId,
+  validate,
+  validateParams,
+} from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { productController } from './product.controller';
 import {
@@ -7,12 +14,32 @@ import {
   updateProductSchema,
   toggleProductStatusSchema,
   productParamsSchema,
+  bulkCreateProductSchema,
 } from './product.schemas';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Todas las rutas requieren autenticación y business_id
+// Todas las rutas requieren autenticación
 router.use(authenticate);
+
+// Rutas para BUSINESS_OWNER con múltiples negocios (sin business_id inyectado)
+router.get(
+  '/owner',
+  authorize(UserRole.BUSINESS_OWNER),
+  productController.getByOwner
+);
+
+// Bulk create para múltiples negocios (solo ADMIN) con soporte de archivo
+router.post(
+  '/bulk',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  upload.single('image'),
+  validate(bulkCreateProductSchema),
+  productController.bulkCreate
+);
+
+// Rutas que requieren business_id (ADMIN/STAFF scoping)
 router.use(injectBusinessId);
 
 // GET /products - Listar productos (ADMIN y STAFF pueden leer)
@@ -20,16 +47,27 @@ router.use(injectBusinessId);
 router.get('/', productController.getAll);
 
 // GET /products/:id - Obtener producto por ID (ADMIN y STAFF pueden leer)
-router.get('/:id', validateParams(productParamsSchema), productController.getById);
+router.get(
+  '/:id',
+  validateParams(productParamsSchema),
+  productController.getById
+);
 
 // POST /products - Crear producto (solo ADMIN)
-router.post('/', authorize(UserRole.ADMIN), validate(createProductSchema), productController.create);
+router.post(
+  '/',
+  authorize(UserRole.ADMIN),
+  upload.single('image'),
+  validate(createProductSchema),
+  productController.create
+);
 
 // PUT /products/:id - Actualizar producto (solo ADMIN)
 router.put(
   '/:id',
   authorize(UserRole.ADMIN),
   validateParams(productParamsSchema),
+  upload.single('image'),
   validate(updateProductSchema),
   productController.update
 );
@@ -44,8 +82,11 @@ router.patch(
 );
 
 // DELETE /products/:id - Eliminar producto (solo ADMIN)
-router.delete('/:id', authorize(UserRole.ADMIN), validateParams(productParamsSchema), productController.delete);
+router.delete(
+  '/:id',
+  authorize(UserRole.ADMIN),
+  validateParams(productParamsSchema),
+  productController.delete
+);
 
 export default router;
-
-

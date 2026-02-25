@@ -1,9 +1,52 @@
 import { Op } from 'sequelize';
-import { Product, ProductOption, Category } from '../../shared/database/models';
+import { Product, ProductOption, Category, Business } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 import { ProductStatus } from '../../shared/database/models/enums';
 
 export class ProductRepository {
+  public async findAllByBusinessIds(
+    businessIds: number[],
+    filters?: { category_id?: number; status?: ProductStatus }
+  ) {
+    const where: any = {
+      business_id: {
+        [Op.in]: businessIds,
+      },
+    };
+
+    if (filters?.category_id) {
+      where.category_id = filters.category_id;
+    }
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+
+    const products = await Product.findAll({
+      where,
+      include: [
+        {
+          model: Business,
+          as: 'business',
+          attributes: ['id', 'name'],
+        },
+        {
+          model: Category,
+          as: 'category',
+          attributes: ['id', 'name'],
+        },
+        {
+          model: ProductOption,
+          as: 'options',
+          attributes: ['id', 'option_type', 'option_value', 'extra_price'],
+        },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    return products;
+  }
+
   public async findAll(businessId: number, filters?: { category_id?: number; status?: ProductStatus }) {
     const where: any = {
       business_id: businessId,

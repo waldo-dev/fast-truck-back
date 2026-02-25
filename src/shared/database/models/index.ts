@@ -17,6 +17,7 @@ import { ProductOptionRecipe } from './ProductOptionRecipe';
 import { ProductRecipe } from './ProductRecipe';
 import { Promotion } from './Promotion';
 import { PromotionProduct } from './PromotionProduct';
+import { ProductBusiness } from './ProductBusiness';
 import { User } from './User';
 import { Otp } from './Otp';
 import { PaymentConfig } from './PaymentConfig';
@@ -129,6 +130,12 @@ const initializeRelations = (): void => {
   User.belongsToMany(Business, { through: UserBusiness, foreignKey: 'user_id', as: 'businesses' });
   Business.belongsToMany(User, { through: UserBusiness, foreignKey: 'business_id', as: 'members' });
 
+  // ProductBusiness relations (asignación de negocios a owner para productos)
+  ProductBusiness.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+  ProductBusiness.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
+  User.hasMany(ProductBusiness, { foreignKey: 'user_id', as: 'productBusinesses' });
+  Business.hasMany(ProductBusiness, { foreignKey: 'business_id', as: 'productBusinesses' });
+
   // PaymentConfig relations
   PaymentConfig.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
   Business.hasMany(PaymentConfig, { foreignKey: 'business_id', as: 'paymentConfigs' });
@@ -158,6 +165,7 @@ export {
   ProductRecipe,
   Promotion,
   PromotionProduct,
+  ProductBusiness,
   User,
   UserBusiness,
 };

@@ -1,7 +1,27 @@
-import { Category } from '../../shared/database/models';
+import { Op } from 'sequelize';
+import { Category, Business } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 
 export class CategoryRepository {
+  public async findAllByBusinessIds(businessIds: number[]) {
+    const categories = await Category.findAll({
+      where: {
+        business_id: { [Op.in]: businessIds },
+        deleted_at: null,
+      },
+      include: [
+        {
+          model: Business,
+          as: 'business',
+          attributes: ['id', 'name'],
+        },
+      ],
+      order: [['name', 'ASC']],
+    });
+
+    return categories;
+  }
+
   public async findAll(businessId: number) {
     const categories = await Category.findAll({
       where: {

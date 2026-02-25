@@ -16,7 +16,7 @@ export class BusinessRepository {
     return business;
   }
 
-  public async findById(id: number, businessId: number) {
+  public async findById(id: number) {
     // Scoping: verificar que el business pertenezca al usuario
     // Solo puede acceder a su propio business (id debe coincidir con businessId)
     //if (id !== businessId) {
@@ -65,7 +65,6 @@ export class BusinessRepository {
 
   public async update(
     id: number,
-    businessId: number,
     data: {
       name?: string;
       brand_name?: string | null;
@@ -89,7 +88,7 @@ export class BusinessRepository {
     return business.reload();
   }
 
-  public async delete(id: number, businessId: number) {
+  public async delete(id: number) {
     // Scoping: solo puede eliminar su propio business
     //if (id !== businessId) {
     //  throw new AppError('Business not found', 404);

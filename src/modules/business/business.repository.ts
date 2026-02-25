@@ -1,6 +1,5 @@
 import { Business, UserBusiness } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
-import { User } from '../../shared/database/models';
 
 export class BusinessRepository {
   public async findAll(businessId: number) {

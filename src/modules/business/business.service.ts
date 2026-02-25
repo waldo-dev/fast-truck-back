@@ -19,7 +19,7 @@ export class BusinessService {
   public async getBusinessById(id: number, businessId: number) {
     console.log("🚀 ~ BusinessService ~ getBusinessById ~ businessId:", businessId)
     console.log("🚀 ~ BusinessService ~ getBusinessById ~ id:", id)
-    const business = await businessRepository.findById(id, businessId);
+    const business = await businessRepository.findById(id);
     return business;
   }
 
@@ -63,7 +63,7 @@ export class BusinessService {
       throw new AppError('Only ADMIN or BUSINESS_OWNER can update business', 403);
     }
 
-    const business = await businessRepository.update(id, businessId, data);
+    const business = await businessRepository.update(id, data);
     return business;
   }
 
@@ -73,7 +73,7 @@ export class BusinessService {
       throw new AppError('Only ADMIN can delete business', 403);
     }
 
-    await businessRepository.delete(id, businessId);
+    await businessRepository.delete(id);
   }
 }
 

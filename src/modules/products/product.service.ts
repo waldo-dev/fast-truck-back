@@ -127,8 +127,7 @@ export class ProductService {
       }>;
     },
     businessId: number,
-    userRole: UserRole,
-    userId: number
+    userRole: UserRole
   ) {
     // Solo ADMIN puede crear productos
     if (userRole !== UserRole.ADMIN) {

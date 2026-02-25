@@ -72,8 +72,7 @@ export class UserController {
           id: req.user.id,
           role: req.user.role as UserRole,
           businessId: req.user.business_id,
-        },
-        businessId
+        }
       );
 
       res.status(200).json({

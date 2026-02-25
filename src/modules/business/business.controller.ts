@@ -176,7 +176,6 @@ export class BusinessController {
 
       const business = await businessService.updateBusiness(
         id,
-        req.business_id,
         {
           name,
           brand_name,
@@ -220,7 +219,7 @@ export class BusinessController {
         return;
       }
 
-      await businessService.deleteBusiness(id, req.business_id, req.user.role as UserRole);
+      await businessService.deleteBusiness(id, req.user.role as UserRole);
 
       res.status(200).json({
         success: true,

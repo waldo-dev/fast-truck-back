@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import { AppError } from '../../shared/errors';
 import { UserRole } from '../../shared/database/models/enums';
 import { userRepository } from './user.repository';
@@ -61,7 +62,7 @@ export class UserService {
   }
 
   public async getUserById(id: number, businessId: number) {
-    const user = await userRepository.findById(id, businessId);
+    const user = await userRepository.findActiveById(id, businessId);
     return user;
   }
 
@@ -80,23 +81,31 @@ export class UserService {
       throw new AppError('Only ADMIN or BUSINESS_OWNER can create users', 403);
     }
 
-    // Solo se pueden crear usuarios LOCAL_OPERATOR (no otros ADMIN/OWNER)
     const role = data.role || UserRole.LOCAL_OPERATOR;
-    if (role !== UserRole.LOCAL_OPERATOR) {
-      throw new AppError('Can only create LOCAL_OPERATOR users', 403);
+
+    if (requester.role === UserRole.BUSINESS_OWNER && role !== UserRole.LOCAL_OPERATOR) {
+      throw new AppError('BUSINESS_OWNER can only create LOCAL_OPERATOR users', 403);
     }
 
-    const allowedBusinessIds = await this.getAllowedBusinessIds(requester.id, requester.businessId);
+    const allowedBusinessIds =
+      requester.role === UserRole.ADMIN
+        ? undefined
+        : await this.getAllowedBusinessIds(requester.id, requester.businessId);
+
     const targetBusinessIds =
-      businessIds && businessIds.length > 0 ? Array.from(new Set(businessIds)) : allowedBusinessIds;
+      businessIds && businessIds.length > 0
+        ? Array.from(new Set(businessIds))
+        : allowedBusinessIds;
 
     if (!targetBusinessIds || targetBusinessIds.length === 0) {
       throw new AppError('At least one business is required to create a user', 400);
     }
 
-    const unauthorized = targetBusinessIds.filter((id) => !allowedBusinessIds.includes(id));
-    if (unauthorized.length > 0) {
-      throw new AppError(`Business not associated to this user: ${unauthorized.join(',')}`, 403);
+    if (requester.role !== UserRole.ADMIN && allowedBusinessIds) {
+      const unauthorized = targetBusinessIds.filter((id) => !allowedBusinessIds.includes(id));
+      if (unauthorized.length > 0) {
+        throw new AppError(`Business not associated to this user: ${unauthorized.join(',')}`, 403);
+      }
     }
 
     const primaryBusinessId = targetBusinessIds[0];
@@ -139,14 +148,21 @@ export class UserService {
     let targetBusinessIds: number[] | undefined;
 
     if (businessIds) {
-      const allowedBusinessIds = await this.getAllowedBusinessIds(requester.id, requester.businessId);
+      const allowedBusinessIds =
+        requester.role === UserRole.ADMIN
+          ? undefined
+          : await this.getAllowedBusinessIds(requester.id, requester.businessId);
+
       targetBusinessIds = Array.from(new Set(businessIds));
       if (targetBusinessIds.length === 0) {
         throw new AppError('At least one business is required', 400);
       }
-      const unauthorized = targetBusinessIds.filter((id) => !allowedBusinessIds.includes(id));
-      if (unauthorized.length > 0) {
-        throw new AppError(`Business not associated to this user: ${unauthorized.join(',')}`, 403);
+
+      if (requester.role !== UserRole.ADMIN && allowedBusinessIds) {
+        const unauthorized = targetBusinessIds.filter((id) => !allowedBusinessIds.includes(id));
+        if (unauthorized.length > 0) {
+          throw new AppError(`Business not associated to this user: ${unauthorized.join(',')}`, 403);
+        }
       }
     }
 
@@ -170,6 +186,35 @@ export class UserService {
 
     const user = await userRepository.deactivate(id, businessId);
     return user;
+  }
+
+  public async updatePassword(
+    id: number,
+    newPassword: string,
+    requester: { id: number; role: UserRole; businessId?: number | null }
+  ) {
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(requester.role)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can update passwords', 403);
+    }
+
+    const allowedBusinessIds =
+      requester.role === UserRole.ADMIN
+        ? undefined
+        : await this.getAllowedBusinessIds(requester.id, requester.businessId);
+
+    const { businessIds } = await userRepository.getUserWithBusinessIds(id);
+
+    if (requester.role !== UserRole.ADMIN && allowedBusinessIds) {
+      const hasAccess = businessIds.some((businessId) => allowedBusinessIds.includes(businessId));
+      if (!hasAccess) {
+        throw new AppError('Business not associated to this user', 403);
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const updatedUser = await userRepository.updatePassword(id, hashedPassword);
+
+    return updatedUser;
   }
 }
 

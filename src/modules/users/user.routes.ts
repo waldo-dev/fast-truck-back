@@ -7,6 +7,7 @@ import {
   businessParamsSchema,
   createUserSchema,
   updateUserSchema,
+  updatePasswordSchema,
   userParamsSchema,
 } from './user.schemas';
 
@@ -54,6 +55,15 @@ router.put(
   validateParams(userParamsSchema),
   validate(updateUserSchema),
   userController.update
+);
+
+// PATCH /users/:id/password - Actualizar contraseña (ADMIN o BUSINESS_OWNER) con scoping
+router.patch(
+  '/:id/password',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  validateParams(userParamsSchema),
+  validate(updatePasswordSchema),
+  userController.updatePassword
 );
 
 // DELETE /users/:id - Desactivar usuario (solo ADMIN)

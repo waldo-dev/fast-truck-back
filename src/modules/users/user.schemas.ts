@@ -18,6 +18,10 @@ export const updateUserSchema = z.object({
   business_ids: z.array(z.number().int().positive()).min(1, 'At least one business is required').optional(),
 });
 
+export const updatePasswordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 export const userParamsSchema = z.object({
   id: z.string().regex(/^\d+$/, 'ID must be a number').transform(Number),
 });

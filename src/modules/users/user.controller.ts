@@ -257,6 +257,7 @@ export class UserController {
       }
 
       const id = parseInt(req.params.id, 10);
+      console.log("🚀 ~ UserController ~ id:", id)
 
       if (isNaN(id)) {
         res.status(400).json({
@@ -274,6 +275,48 @@ export class UserController {
         success: true,
         data: user,
         message: 'User deactivated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public updatePassword = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'User is required',
+          },
+        });
+        return;
+      }
+
+      const id = parseInt(req.params.id, 10);
+
+      if (isNaN(id)) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Invalid user ID',
+          },
+        });
+        return;
+      }
+
+      const { password } = req.body as { password: string };
+
+      const user = await userService.updatePassword(id, password, {
+        id: req.user.id,
+        role: req.user.role as UserRole,
+        businessId: req.user.business_id,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: user,
+        message: 'Password updated successfully',
       });
     } catch (error) {
       next(error);

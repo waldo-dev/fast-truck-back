@@ -1,6 +1,7 @@
 import { AppError } from '../../shared/errors';
-import { UserRole, OrderSource, OrderStatus } from '../../shared/database/models/enums';
+import { UserRole, OrderSource, OrderStatus, OrderType } from '../../shared/database/models/enums';
 import { orderRepository } from './order.repository';
+import { customerRepository } from '../customers/customer.repository';
 
 export class OrderService {
   public async getAllOrders(
@@ -18,11 +19,21 @@ export class OrderService {
 
   public async createOrder(
     data: {
-      customer_id: number;
+      customer_id?: number;
+      customer?: {
+        name: string;
+        phone: string;
+        notes?: string | null;
+        address?: {
+          address: string;
+          notes?: string | null;
+          is_default?: boolean;
+        };
+      };
       address_id?: number | null;
       event_id?: number | null;
       order_source: OrderSource;
-      order_type: string;
+      order_type: OrderType;
       status?: OrderStatus;
       items: Array<{
         product_id: number;
@@ -39,13 +50,62 @@ export class OrderService {
       throw new AppError('LOCAL_OPERATOR can only create WHATSAPP orders', 403);
     }
 
+    // Obtener o crear customer
+    let customerId = data.customer_id ?? null;
+    if (!customerId && !data.customer) {
+      throw new AppError('Customer information is required', 400);
+    }
+
+    if (customerId) {
+      // Valida pertenencia al negocio
+      await customerRepository.findById(customerId, businessId);
+    } else if (data.customer) {
+      const existingCustomer = await customerRepository.findByPhone(data.customer.phone, businessId);
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const newCustomer = await customerRepository.create({
+          business_id: businessId,
+          name: data.customer.name,
+          phone: data.customer.phone,
+          notes: data.customer.notes || null,
+        });
+        customerId = newCustomer.id;
+      }
+    }
+
+    if (!customerId) {
+      throw new AppError('Unable to resolve customer', 400);
+    }
+
+    // Resolver dirección para DELIVERY
+    let addressId = data.address_id ?? null;
+    if (data.order_type === OrderType.DELIVERY) {
+      if (addressId) {
+        await customerRepository.findAddressById(addressId, customerId);
+      } else if (data.customer?.address) {
+        const newAddress = await customerRepository.createAddress({
+          customer_id: customerId,
+          address: data.customer.address.address,
+          notes: data.customer.address.notes || null,
+          is_default: data.customer.address.is_default ?? true,
+        });
+        addressId = newAddress.id;
+      } else {
+        throw new AppError('Address is required for DELIVERY orders', 400);
+      }
+    } else if (addressId) {
+      // Validar que la dirección pertenece al customer si se envía en otros tipos
+      await customerRepository.findAddressById(addressId, customerId);
+    }
+
     const order = await orderRepository.create({
       business_id: businessId,
-      customer_id: data.customer_id,
-      address_id: data.address_id,
+      customer_id: customerId,
+      address_id: addressId,
       event_id: data.event_id,
       order_source: data.order_source,
-      order_type: data.order_type as any,
+      order_type: data.order_type,
       status: data.status,
       items: data.items,
     });

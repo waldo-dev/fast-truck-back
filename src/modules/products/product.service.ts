@@ -4,6 +4,12 @@ import { productRepository } from './product.repository';
 import { UserBusiness } from '../../shared/database/models';
 
 export class ProductService {
+  private generateSku() {
+    const timePart = Date.now().toString(36).toUpperCase();
+    const randomPart = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `SKU-${timePart}-${randomPart}`;
+  }
+
   private async ensureOwnerAccess(userRole: UserRole, userId: number | undefined, businessId: number) {
     if (userRole !== UserRole.BUSINESS_OWNER) return;
     if (!userId) {
@@ -26,6 +32,7 @@ export class ProductService {
       category_id?: number | null;
       image_url?: string | null;
       status?: ProductStatus;
+      sku?: string | null;
       options?: Array<{
         option_type?: string | null;
         option_value?: string | null;
@@ -63,9 +70,12 @@ export class ProductService {
             ? ((data.status as string).toUpperCase() as ProductStatus)
             : data.status;
 
+        const sku = data.sku && data.sku.trim().length > 0 ? data.sku.trim() : this.generateSku();
+
         const product = await productRepository.create({
           ...data,
           status: normalizedStatus,
+          sku,
           business_id: businessId,
         });
 
@@ -133,6 +143,7 @@ export class ProductService {
       category_id?: number | null;
       image_url?: string | null;
       status?: ProductStatus;
+      sku?: string | null;
       options?: Array<{
         option_type?: string | null;
         option_value?: string | null;
@@ -150,8 +161,17 @@ export class ProductService {
 
     await this.ensureOwnerAccess(userRole, userId, businessId);
 
+    const normalizedStatus =
+      typeof data.status === 'string'
+        ? ((data.status as string).toUpperCase() as ProductStatus)
+        : data.status;
+
+    const sku = data.sku && data.sku.trim().length > 0 ? data.sku.trim() : this.generateSku();
+
     const product = await productRepository.create({
       ...data,
+      status: normalizedStatus,
+      sku,
       business_id: businessId,
     });
 
@@ -168,6 +188,7 @@ export class ProductService {
       category_id?: number | null;
       image_url?: string | null;
       status?: ProductStatus;
+      sku?: string | null;
       options?: Array<{
         id?: number;
         option_type?: string | null;
@@ -184,13 +205,127 @@ export class ProductService {
 
     await this.ensureOwnerAccess(userRole, userId, businessId);
 
-    const product = await productRepository.update(id, businessId, data);
+    const current = await productRepository.findById(id, businessId);
+
+    const normalizedStatus =
+      data.status && typeof data.status === 'string'
+        ? ((data.status as string).toUpperCase() as ProductStatus)
+        : data.status;
+
+    let nextSku: string | undefined;
+    if (data.sku === undefined || data.sku === null || data.sku.trim().length === 0) {
+      // Si no viene SKU y el producto no tiene, generar uno nuevo
+      if (!current.sku) {
+        nextSku = this.generateSku();
+      }
+    } else {
+      nextSku = data.sku.trim();
+    }
+
+    const product = await productRepository.update(id, businessId, {
+      ...data,
+      ...(normalizedStatus ? { status: normalizedStatus } : {}),
+      ...(nextSku !== undefined ? { sku: nextSku } : {}),
+    });
     return product;
   }
 
   public async updateProductImage(id: number, businessId: number, imageUrl: string) {
-    const product = await productRepository.update(id, businessId, { image_url: imageUrl });
+    await productRepository.update(id, businessId, { image_url: imageUrl });
+    // Traerlo nuevamente con asociaciones y campos actualizados (incluido image_url)
+    const product = await productRepository.findById(id, businessId);
     return product;
+  }
+
+  public async importProductsFromCsv(
+    csvContent: string,
+    userRole: UserRole,
+    userId: number
+  ): Promise<Array<{ row: number; product?: any; error?: string }>> {
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can import products', 403);
+    }
+
+    const lines = csvContent
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    if (lines.length === 0) {
+      throw new AppError('CSV is empty', 400);
+    }
+
+    const headerLine = lines[0];
+    const delimiter = headerLine.includes(';') ? ';' : ',';
+    const headers = headerLine.split(delimiter).map((h) => h.trim().toLowerCase());
+
+    const expected = ['business_id', 'name', 'price', 'category_id', 'description', 'status', 'sku', 'image_url'];
+    const missingHeaders = expected.filter((h) => !headers.includes(h));
+    if (missingHeaders.length > 0) {
+      throw new AppError(`Missing headers: ${missingHeaders.join(', ')}`, 400);
+    }
+
+    const idx = (key: string) => headers.indexOf(key);
+    const rows = lines.slice(1);
+    const results: Array<{ row: number; product?: any; error?: string }> = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const rowNumber = i + 2; // considerando header en línea 1
+      const raw = rows[i];
+      if (!raw) continue;
+      const cols = raw.split(delimiter);
+
+      const rawBusinessId = cols[idx('business_id')]?.trim();
+      const rawName = cols[idx('name')]?.trim();
+      const rawPrice = cols[idx('price')]?.trim();
+      const rawCategoryId = cols[idx('category_id')]?.trim();
+      const rawDescription = cols[idx('description')]?.trim();
+      const rawStatus = cols[idx('status')]?.trim();
+      const rawSku = cols[idx('sku')]?.trim();
+      const rawImageUrl = cols[idx('image_url')]?.trim();
+
+      const businessId = rawBusinessId ? parseInt(rawBusinessId, 10) : NaN;
+      const price = rawPrice ? parseInt(rawPrice, 10) : NaN;
+      const categoryId = rawCategoryId ? parseInt(rawCategoryId, 10) : undefined;
+
+      const status =
+        rawStatus && Object.values(ProductStatus).includes(rawStatus.toUpperCase() as ProductStatus)
+          ? (rawStatus.toUpperCase() as ProductStatus)
+          : ProductStatus.ACTIVE;
+
+      try {
+        if (!rawBusinessId || isNaN(businessId)) {
+          throw new Error('business_id is required and must be a number');
+        }
+        if (!rawName) {
+          throw new Error('name is required');
+        }
+        if (!rawPrice || isNaN(price)) {
+          throw new Error('price is required and must be a number');
+        }
+
+        // Validar pertenencia para OWNER
+        await this.ensureOwnerAccess(userRole, userId, businessId);
+
+        const product = await productRepository.create({
+          business_id: businessId,
+          name: rawName,
+          description: rawDescription || null,
+          price,
+          category_id: categoryId || null,
+          image_url: rawImageUrl || null,
+          status,
+          sku: rawSku && rawSku.length > 0 ? rawSku : this.generateSku(),
+          options: [],
+        });
+
+        results.push({ row: rowNumber, product });
+      } catch (err: any) {
+        results.push({ row: rowNumber, error: err?.message || 'Unexpected error' });
+      }
+    }
+
+    return results;
   }
 
   public async toggleProductStatus(

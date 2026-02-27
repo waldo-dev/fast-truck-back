@@ -30,14 +30,19 @@ router.post('/', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER), validate(cr
 // PUT /categories/:id - Actualizar categoría (solo ADMIN)
 router.put(
   '/:id',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
   validateParams(categoryParamsSchema),
   validate(updateCategorySchema),
   categoryController.update
 );
 
 // DELETE /categories/:id - Eliminar categoría (solo ADMIN)
-router.delete('/:id', authorize(UserRole.ADMIN), validateParams(categoryParamsSchema), categoryController.delete);
+router.delete(
+  '/:id',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  validateParams(categoryParamsSchema),
+  categoryController.delete
+);
 
 export default router;
 

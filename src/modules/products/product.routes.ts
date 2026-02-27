@@ -29,6 +29,18 @@ router.get(
   authorize(UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
   productController.getByOwner
 );
+router.get(
+  '/owner/export',
+  authorize(UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
+  productController.getByOwnerCsv
+);
+
+router.post(
+  '/owner/import',
+  authorize(UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
+  upload.single('file'),
+  productController.importFromCsv
+);
 
 // Bulk create para múltiples negocios (solo ADMIN) con soporte de archivo
 router.post(

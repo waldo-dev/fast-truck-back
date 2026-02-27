@@ -12,14 +12,11 @@ export class ProductRepository {
       business_id: {
         [Op.in]: businessIds,
       },
+      status: filters?.status || ProductStatus.ACTIVE,
     };
 
     if (filters?.category_id) {
       where.category_id = filters.category_id;
-    }
-
-    if (filters?.status) {
-      where.status = filters.status;
     }
 
     const products = await Product.findAll({
@@ -50,14 +47,11 @@ export class ProductRepository {
   public async findAll(businessId: number, filters?: { category_id?: number; status?: ProductStatus }) {
     const where: any = {
       business_id: businessId,
+      status: filters?.status || ProductStatus.ACTIVE,
     };
 
     if (filters?.category_id) {
       where.category_id = filters.category_id;
-    }
-
-    if (filters?.status) {
-      where.status = filters.status;
     }
 
     const products = await Product.findAll({
@@ -85,7 +79,8 @@ export class ProductRepository {
     const product = await Product.findOne({
       where: {
         id,
-        //business_id: businessId,
+        business_id: businessId,
+        status: ProductStatus.ACTIVE,
       },
       include: [
         {
@@ -116,6 +111,7 @@ export class ProductRepository {
     category_id?: number | null;
     image_url?: string | null;
     status?: ProductStatus;
+    sku?: string | null;
     options?: Array<{
       option_type?: string | null;
       option_value?: string | null;
@@ -124,7 +120,12 @@ export class ProductRepository {
   }) {
     const { options, ...productData } = data;
 
-    const product = await Product.create(productData);
+    let product;
+    try {
+      product = await Product.create(productData);
+    } catch (err: any) {
+      throw new AppError(err?.message || 'Failed to create product', 400);
+    }
 
     // Crear opciones si se proporcionan
     if (options && options.length > 0) {
@@ -151,6 +152,7 @@ export class ProductRepository {
       category_id?: number | null;
       image_url?: string | null;
       status?: ProductStatus;
+      sku?: string | null;
       options?: Array<{
         id?: number;
         option_type?: string | null;

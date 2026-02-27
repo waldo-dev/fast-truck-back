@@ -44,6 +44,7 @@ export const createProductSchema = z.object({
   category_id: z.coerce.number().int().positive('Category ID must be a positive integer').optional().nullable(),
   image_url: z.string().url('Invalid URL format').optional().nullable(),
   status: productStatusSchema.optional(),
+  sku: z.string().trim().max(100, 'SKU must be less than 100 characters').optional(),
 });
 
 const bulkBase = z.object({
@@ -64,6 +65,7 @@ export const updateProductSchema = z.object({
   image_url: z.string().url('Invalid URL format').optional().nullable(),
   status: productStatusSchema.optional(),
   options: productOptionsSchema,
+  sku: z.string().trim().max(100, 'SKU must be less than 100 characters').optional(),
 });
 
 export const toggleProductStatusSchema = z.object({

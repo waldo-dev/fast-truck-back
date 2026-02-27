@@ -119,9 +119,9 @@ export class CategoryService {
     data: { name?: string },
     userRole: UserRole
   ) {
-    // Solo ADMIN puede actualizar categorías
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can update categories', 403);
+    // ADMIN o BUSINESS_OWNER con pertenencia pueden actualizar
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can update categories', 403);
     }
 
     const category = await categoryRepository.update(id, businessId, data);
@@ -129,9 +129,9 @@ export class CategoryService {
   }
 
   public async deleteCategory(id: number, businessId: number, userRole: UserRole) {
-    // Solo ADMIN puede eliminar categorías
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can delete categories', 403);
+    // ADMIN o BUSINESS_OWNER con pertenencia pueden eliminar
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can delete categories', 403);
     }
 
     await categoryRepository.delete(id, businessId);

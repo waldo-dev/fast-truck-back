@@ -161,6 +161,120 @@ export class ProductController {
     }
   };
 
+  public getByOwnerCsv = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'User is required',
+          },
+        });
+        return;
+      }
+
+      const categoryId = req.query.category_id ? parseInt(req.query.category_id as string, 10) : undefined;
+      const businessId = req.query.business_id ? parseInt(req.query.business_id as string, 10) : undefined;
+      const status = req.query.status as ProductStatus | undefined;
+
+      const filters: { category_id?: number; status?: ProductStatus } = {};
+      if (categoryId && !isNaN(categoryId)) {
+        filters.category_id = categoryId;
+      }
+      if (status && Object.values(ProductStatus).includes(status)) {
+        filters.status = status;
+      }
+
+      const products = await productService.getProductsByOwner(
+        req.user.id,
+        req.user.role as UserRole,
+        filters,
+        businessId && !isNaN(businessId) ? businessId : undefined
+      );
+
+      const escape = (value: unknown) => {
+        if (value === null || value === undefined) return '""';
+        const str = String(value).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      const headers = [
+        'id',
+        'business_id',
+        'business_name',
+        'category_id',
+        'category_name',
+        'sku',
+        'name',
+        'description',
+        'price',
+        'status',
+        'image_url',
+        'created_at',
+      ];
+
+      const rows = products.map((p: any) =>
+        [
+          p.id,
+          p.business_id,
+          p.business?.name || '',
+          p.category_id,
+          p.category?.name || '',
+          p.sku || '',
+          p.name || '',
+          p.description || '',
+          p.price ?? '',
+          p.status || '',
+          p.image_url || '',
+          p.created_at ? new Date(p.created_at).toISOString() : '',
+        ].map(escape).join(';')
+      );
+
+      const csvContent = [headers.join(';'), ...rows].join('\n');
+
+      res.header('Content-Type', 'text/csv');
+      res.header('Content-Disposition', 'attachment; filename="products-owner.csv"');
+      res.status(200).send(csvContent);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public importFromCsv = async (req: FileAuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'User is required',
+          },
+        });
+        return;
+      }
+
+      const file = req.file;
+
+      if (!file) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'CSV file is required' },
+        });
+        return;
+      }
+
+      const content = file.buffer.toString('utf-8');
+
+      const results = await productService.importProductsFromCsv(content, req.user.role as UserRole, req.user.id);
+
+      res.status(200).json({
+        success: true,
+        data: results,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public getAll = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.business_id) {

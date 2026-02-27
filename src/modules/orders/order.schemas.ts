@@ -1,9 +1,23 @@
 import { z } from 'zod';
 import { OrderSource, OrderStatus, OrderType } from '../../shared/database/models/enums';
 
+const customerAddressSchema = z.object({
+  address: z.string().min(1, 'Address is required'),
+  notes: z.string().max(500, 'Notes too long').optional().nullable(),
+  is_default: z.boolean().optional(),
+});
+
+const customerSchema = z.object({
+  name: z.string().min(1, 'Customer name is required'),
+  phone: z.string().min(6, 'Phone is too short'),
+  notes: z.string().max(500, 'Notes too long').optional().nullable(),
+  address: customerAddressSchema.optional(),
+});
+
 export const createOrderSchema = z
   .object({
-    customer_id: z.number().int().positive('Customer ID must be a positive integer'),
+    customer_id: z.number().int().positive('Customer ID must be a positive integer').optional(),
+    customer: customerSchema.optional(),
     address_id: z.number().int().positive('Address ID must be a positive integer').optional().nullable(),
     event_id: z.number().int().positive('Event ID must be a positive integer').optional().nullable(),
     order_source: z.nativeEnum(OrderSource, {
@@ -26,14 +40,24 @@ export const createOrderSchema = z
   })
   .refine(
     (data) => {
-      // Si es DELIVERY, debe tener address_id
-      if (data.order_type === OrderType.DELIVERY && !data.address_id) {
-        return false;
+      // Debe existir customer_id o customer
+      return !!data.customer_id || !!data.customer;
+    },
+    {
+      message: 'Customer information is required (customer_id or customer)',
+      path: ['customer'],
+    }
+  )
+  .refine(
+    (data) => {
+      // Si es DELIVERY, debe tener address_id o customer.address
+      if (data.order_type === OrderType.DELIVERY) {
+        return !!data.address_id || !!data.customer?.address;
       }
       return true;
     },
     {
-      message: 'Address ID is required for DELIVERY orders',
+      message: 'Address is required for DELIVERY orders',
       path: ['address_id'],
     }
   );

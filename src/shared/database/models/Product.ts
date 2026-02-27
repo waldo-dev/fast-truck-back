@@ -6,6 +6,7 @@ interface ProductAttributes {
   id: number;
   business_id: number | null;
   category_id: number | null;
+  sku: string | null;
   name: string;
   description: string | null;
   price: number;
@@ -20,6 +21,7 @@ export class Product extends Model<ProductAttributes, ProductCreationAttributes>
   public id!: number;
   public business_id!: number | null;
   public category_id!: number | null;
+  public sku!: string | null;
   public name!: string;
   public description!: string | null;
   public price!: number;
@@ -50,6 +52,11 @@ Product.init(
         model: 'categories',
         key: 'id',
       },
+    },
+    sku: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      unique: false,
     },
     name: {
       type: DataTypes.STRING(150),

@@ -89,11 +89,12 @@ export class OrderController {
         return;
       }
 
-      const { customer_id, address_id, event_id, order_source, order_type, status, items } = req.body;
+      const { customer_id, customer, address_id, event_id, order_source, order_type, status, items } = req.body;
 
       const order = await orderService.createOrder(
         {
           customer_id,
+          customer,
           address_id,
           event_id,
           order_source,

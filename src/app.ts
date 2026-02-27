@@ -20,7 +20,7 @@ import publicRoutes from './modules/public/public.routes';
 const createApp = (): Application => {
   const app = express();
 
-  const allowedOrigins = ['https://fast-trucks.chilsmart.com', 'http://localhost:3000'];
+  const allowedOrigins = ['https://fast-trucks.chilsmart.com', 'http://localhost:3000', 'https://app.operfoods.com'];
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {

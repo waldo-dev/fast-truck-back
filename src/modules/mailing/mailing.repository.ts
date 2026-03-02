@@ -3,7 +3,7 @@ import { resendClient } from '../../shared/email/resend';
 type CampaignStatus = 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'PAUSED';
 type SendType = 'IMMEDIATE' | 'SCHEDULED';
 
-interface Campaign {
+export interface Campaign {
   id: number;
   business_id: number;
   name: string;

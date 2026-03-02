@@ -1,11 +1,11 @@
-import { mailingRepository } from './mailing.repository';
+import { mailingRepository, Campaign } from './mailing.repository';
 
 export class MailingService {
   public async getDashboard(businessId: number) {
     return mailingRepository.getDashboard(businessId);
   }
 
-  public async listCampaigns(businessId: number) {
+  public async listCampaigns(businessId: number): Promise<Campaign[]> {
     return mailingRepository.listCampaigns(businessId);
   }
 

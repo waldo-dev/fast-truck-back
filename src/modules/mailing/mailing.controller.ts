@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest, validate } from '../../shared/middlewares';
+import { AuthRequest } from '../../shared/middlewares';
 import { createCampaignSchema, sendMailSchema } from './mailing.schemas';
 import { mailingService } from './mailing.service';
 

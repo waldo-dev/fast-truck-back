@@ -15,6 +15,7 @@ import eventRoutes from './modules/events/event.routes';
 import orderRoutes from './modules/orders/order.routes';
 import paymentRoutes from './modules/payments/payment.routes';
 import paymentConfigRoutes from './modules/payment-configs/payment-config.routes';
+import mailingRoutes from './modules/mailing/mailing.routes';
 import publicRoutes from './modules/public/public.routes';
 
 const createApp = (): Application => {
@@ -62,6 +63,7 @@ const createApp = (): Application => {
   app.use('/orders', orderRoutes);
   app.use('/payments', paymentRoutes);
   app.use('/payment-configs', paymentConfigRoutes);
+  app.use('/mailing', mailingRoutes);
   app.use('/public', publicRoutes);
 
   // Error handlers (deben ir al final)

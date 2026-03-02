@@ -1,5 +1,6 @@
 import { AppError } from '../../shared/errors';
-import { UserRole, OrderSource, OrderStatus, OrderType } from '../../shared/database/models/enums';
+import { UserRole, OrderSource, OrderStatus, OrderType, PaymentMethod } from '../../shared/database/models/enums';
+import { UserBusiness } from '../../shared/database/models';
 import { orderRepository } from './order.repository';
 import { customerRepository } from '../customers/customer.repository';
 
@@ -22,7 +23,7 @@ export class OrderService {
       customer_id?: number;
       customer?: {
         name: string;
-        phone: string;
+        phone?: string | null;
         notes?: string | null;
         address?: {
           address: string;
@@ -32,6 +33,7 @@ export class OrderService {
       };
       address_id?: number | null;
       event_id?: number | null;
+      payment_method?: PaymentMethod | null;
       order_source: OrderSource;
       order_type: OrderType;
       status?: OrderStatus;
@@ -60,14 +62,28 @@ export class OrderService {
       // Valida pertenencia al negocio
       await customerRepository.findById(customerId, businessId);
     } else if (data.customer) {
-      const existingCustomer = await customerRepository.findByPhone(data.customer.phone, businessId);
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
+      const phone = data.customer.phone?.trim() || null;
+
+      if (phone) {
+        const existingCustomer = await customerRepository.findByPhone(phone, businessId);
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+        } else {
+          const newCustomer = await customerRepository.create({
+            business_id: businessId,
+            name: data.customer.name,
+            phone,
+            notes: data.customer.notes || null,
+          });
+          customerId = newCustomer.id;
+        }
       } else {
+        // Sin phone: crear un customer rápido con phone temporal
+        const tempPhone = `NO_PHONE_${Date.now()}`;
         const newCustomer = await customerRepository.create({
           business_id: businessId,
           name: data.customer.name,
-          phone: data.customer.phone,
+          phone: tempPhone,
           notes: data.customer.notes || null,
         });
         customerId = newCustomer.id;
@@ -99,11 +115,12 @@ export class OrderService {
       await customerRepository.findAddressById(addressId, customerId);
     }
 
-    const order = await orderRepository.create({
+      const order = await orderRepository.create({
       business_id: businessId,
       customer_id: customerId,
       address_id: addressId,
       event_id: data.event_id,
+        payment_method: data.payment_method ?? null,
       order_source: data.order_source,
       order_type: data.order_type,
       status: data.status,
@@ -119,9 +136,10 @@ export class OrderService {
     status: OrderStatus,
     userRole: UserRole
   ) {
-    // Solo ADMIN puede cambiar estados
-    if (userRole !== UserRole.ADMIN) {
-      throw new AppError('Only ADMIN can update order status', 403);
+    // Roles permitidos: ADMIN, BUSINESS_OWNER, LOCAL_OPERATOR
+    const allowedRoles = [UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR];
+    if (!allowedRoles.includes(userRole)) {
+      throw new AppError('Only ADMIN, BUSINESS_OWNER or LOCAL_OPERATOR can update order status', 403);
     }
 
     const order = await orderRepository.updateStatus(id, businessId, status);
@@ -135,6 +153,42 @@ export class OrderService {
     }
 
     await orderRepository.delete(id, businessId);
+  }
+
+  public async getHistory(
+    businessId: number,
+    filters: {
+      startDate?: Date;
+      endDate?: Date;
+      status?: OrderStatus;
+      order_source?: OrderSource;
+      customer_id?: number;
+    }
+  ) {
+    return orderRepository.findHistory(businessId, filters);
+  }
+
+  public async getOrdersByUserBusinesses(userId: number) {
+    const userBusinesses = await UserBusiness.findAll({
+      where: {
+        user_id: userId,
+      },
+      attributes: ['business_id'],
+    });
+
+    if (!userBusinesses.length) {
+      return [];
+    }
+
+    const businessIds = Array.from(new Set(userBusinesses.map((ub) => ub.business_id)));
+    const orders = await orderRepository.findByBusinessIds(businessIds);
+
+    const grouped = businessIds.map((businessId) => ({
+      business_id: businessId,
+      orders: orders.filter((order) => order.business_id === businessId),
+    }));
+
+    return grouped;
   }
 }
 

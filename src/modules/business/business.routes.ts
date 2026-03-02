@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { authenticate, authorize, injectBusinessId } from '../../shared/middlewares';
+import { authenticate, authorize, injectBusinessId, validate } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { businessController } from './business.controller';
 
@@ -22,6 +22,16 @@ router.post('/', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER ), upload.sin
 
 // PUT /business/:id - Actualizar business (solo ADMIN)
 router.put('/:id', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER ), upload.single('logo'), businessController.update);
+
+// GET /business/operating-context - Obtener modo operativo (LOCAL/EVENT)
+router.get('/operating-context', businessController.getOperatingContext);
+
+// PUT /business/operating-context - Actualizar modo operativo (ADMIN/BUSINESS_OWNER)
+router.put(
+  '/operating-context',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  businessController.updateOperatingContext
+);
 
 // DELETE /business/:id - Eliminar business (solo ADMIN)
 router.delete('/:id', authorize(UserRole.ADMIN), businessController.delete);

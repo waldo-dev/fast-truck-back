@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Customer, CustomerAddress } from '../../shared/database/models';
+import { Customer, CustomerAddress, Order } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 
 export class CustomerRepository {
@@ -34,6 +34,25 @@ export class CustomerRepository {
       where: {
         business_id: businessId,
       },
+      order: [['created_at', 'DESC']],
+    });
+
+    return customers;
+  }
+
+  public async findAllWithOrders(businessId: number) {
+    const customers = await Customer.findAll({
+      where: {
+        business_id: businessId,
+      },
+      include: [
+        {
+          model: Order,
+          as: 'orders',
+          attributes: ['id', 'business_id', 'order_source', 'order_type', 'status', 'total', 'created_at'],
+          order: [['created_at', 'DESC']],
+        },
+      ],
       order: [['created_at', 'DESC']],
     });
 

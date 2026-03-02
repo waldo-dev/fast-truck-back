@@ -14,6 +14,7 @@ export enum OrderSource {
   POS = 'POS',
   WHATSAPP = 'WHATSAPP',
   ONLINE = 'ONLINE',
+  EVENT = 'EVENT',
 }
 
 export enum OrderStatus {
@@ -62,12 +63,9 @@ export enum DiscountType {
 
 export enum PaymentProvider {
   WEBPAY = 'WEBPAY',
-  STRIPE = 'STRIPE',
-  MERCADOPAGO = 'MERCADOPAGO',
-  OTHER = 'OTHER',
 }
 
 export enum PaymentEnvironment {
   TEST = 'TEST',
-  PRODUCTION = 'PRODUCTION',
+  PROD = 'PROD',
 }

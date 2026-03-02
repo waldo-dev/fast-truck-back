@@ -1,8 +1,160 @@
 import { Response, NextFunction } from 'express';
-import { CustomerRequest } from '../../shared/middlewares';
+import { AuthRequest, CustomerRequest } from '../../shared/middlewares';
 import { customerService } from './customer.service';
+import { UserRole } from '../../shared/database/models/enums';
 
 export class CustomerController {
+  public createForBusiness = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.business_id || !req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'Business ID and user are required',
+          },
+        });
+        return;
+      }
+
+      if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(req.user.role as UserRole)) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'Only ADMIN or BUSINESS_OWNER can create customers',
+          },
+        });
+        return;
+      }
+
+      const { name, phone, notes, address } = req.body as {
+        name: string;
+        phone: string;
+        notes?: string | null;
+        address?: { address: string; notes?: string | null; is_default?: boolean };
+      };
+
+      const customer = await customerService.createCustomerForBusiness(req.business_id, {
+        name,
+        phone,
+        notes,
+        address,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: customer,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getByUserBusinesses = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'User is required',
+          },
+        });
+        return;
+      }
+
+      const userId = parseInt(req.params.userId, 10);
+
+      if (isNaN(userId)) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Invalid user ID',
+          },
+        });
+        return;
+      }
+
+      const data = await customerService.getCustomersByUserBusinesses(userId, {
+        id: req.user.id,
+        role: req.user.role,
+        businessId: req.user.business_id,
+      });
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getByUserBusinessesCsv = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'User is required',
+          },
+        });
+        return;
+      }
+
+      const userId = parseInt(req.params.userId, 10);
+
+      if (isNaN(userId)) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Invalid user ID',
+          },
+        });
+        return;
+      }
+
+      const data = await customerService.getCustomersByUserBusinesses(userId, {
+        id: req.user.id,
+        role: req.user.role,
+        businessId: req.user.business_id,
+      });
+
+      const headers = ['business_id', 'customer_id', 'name', 'phone', 'notes', 'created_at'];
+
+      const escapeCsv = (value: any) => {
+        if (value === null || value === undefined) return '';
+        const stringValue = String(value);
+        if (stringValue.includes('"') || stringValue.includes(';') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      };
+
+      const rows = data.flatMap((group) =>
+        group.customers.map((customer: any) => ({
+          business_id: group.business_id,
+          customer_id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          notes: customer.notes ?? '',
+          created_at: customer.created_at,
+        }))
+      );
+
+      const csvLines = [
+        headers.join(';'),
+        ...rows.map((row) => headers.map((h) => escapeCsv((row as any)[h])).join(';')),
+      ];
+
+      const csv = csvLines.join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="customers_user_${userId}.csv"`);
+      res.status(200).send(csv);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // OTP Endpoints
   public sendOtp = async (req: CustomerRequest, res: Response, next: NextFunction): Promise<void> => {
     try {

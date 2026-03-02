@@ -1,12 +1,30 @@
 import { Router } from 'express';
-import { extractBusinessId } from '../../shared/middlewares';
+import { authenticate, extractBusinessId, injectBusinessId, validate, validateParams } from '../../shared/middlewares';
 import { customerController } from './customer.controller';
+import { customerUserParamsSchema, createCustomerSchema } from './customer.schemas';
 
 const router = Router();
 
 // OTP Endpoints (públicos, pero requieren business_id en query, body o header)
 router.post('/otp/send', extractBusinessId, customerController.sendOtp);
 router.post('/otp/verify', extractBusinessId, customerController.verifyOtp);
+
+// GET /customers/by-user/:userId - Listar customers de todos los negocios asociados a un usuario
+router.get('/by-user/:userId', authenticate, validateParams(customerUserParamsSchema), customerController.getByUserBusinesses);
+// GET /customers/by-user/:userId/csv - Descargar customers de todos los negocios asociados a un usuario en CSV
+router.get(
+  '/by-user/:userId/csv',
+  authenticate,
+  validateParams(customerUserParamsSchema),
+  customerController.getByUserBusinessesCsv
+);
+
+// Rutas con autenticación y business_id inyectado
+router.use(authenticate);
+router.use(injectBusinessId);
+
+// POST /customers - Crear customer (ADMIN o BUSINESS_OWNER)
+router.post('/', validate(createCustomerSchema), customerController.createForBusiness);
 
 // Customer CRUD (requieren autenticación de customer o business)
 // Por ahora, estas rutas requieren business_id en el request

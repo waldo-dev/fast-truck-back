@@ -2,6 +2,7 @@ import { AppError } from '../../shared/errors';
 import { UserRole } from '../../shared/database/models/enums';
 import { businessRepository } from './business.repository';
 import { UserBusiness } from '../../shared/database/models/UserBusiness';
+import { BusinessOperatingContext } from '../../shared/database/models';
 
 export class BusinessService {
   public async getAllbusiness(businessId: number) {
@@ -73,6 +74,37 @@ export class BusinessService {
     }
 
     await businessRepository.delete(id);
+  }
+
+  public async getOperatingContext(businessId: number) {
+    return businessRepository.getOperatingContext(businessId);
+  }
+
+  public async updateOperatingContext(
+    businessId: number,
+    data: { mode: 'LOCAL' | 'EVENT'; location_id?: number | null; event_id?: number | null },
+    role: UserRole
+  ) {
+    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(role)) {
+      throw new AppError('Only ADMIN or BUSINESS_OWNER can update operating context', 403);
+    }
+
+    if (data.mode === 'LOCAL' && !data.location_id) {
+      throw new AppError('location_id is required for LOCAL mode', 400);
+    }
+
+    if (data.mode === 'EVENT' && !data.event_id) {
+      throw new AppError('event_id is required for EVENT mode', 400);
+    }
+
+    const context = await businessRepository.upsertOperatingContext({
+      business_id: businessId,
+      mode: data.mode,
+      location_id: data.mode === 'LOCAL' ? data.location_id ?? null : null,
+      event_id: data.mode === 'EVENT' ? data.event_id ?? null : null,
+    });
+
+    return context;
   }
 }
 

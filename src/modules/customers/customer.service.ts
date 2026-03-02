@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import { AppError } from '../../shared/errors';
+import { UserRole } from '../../shared/database/models/enums';
+import { UserBusiness } from '../../shared/database/models';
 import { customerRepository } from './customer.repository';
 import { otpService } from './otp.service';
 
@@ -75,6 +77,31 @@ export class CustomerService {
    */
   public async getCustomerById(id: number, businessId: number) {
     const customer = await customerRepository.findById(id, businessId);
+    return customer;
+  }
+
+  public async createCustomerForBusiness(businessId: number, data: { name: string; phone: string; notes?: string | null; address?: { address: string; notes?: string | null; is_default?: boolean } }) {
+    const existing = await customerRepository.findByPhone(data.phone, businessId);
+    if (existing) {
+      throw new AppError('Customer with this phone already exists in this business', 400);
+    }
+
+    const customer = await customerRepository.create({
+      business_id: businessId,
+      name: data.name,
+      phone: data.phone,
+      notes: data.notes ?? null,
+    });
+
+    if (data.address) {
+      await customerRepository.createAddress({
+        customer_id: customer.id,
+        address: data.address.address,
+        notes: data.address.notes ?? null,
+        is_default: data.address.is_default ?? true,
+      });
+    }
+
     return customer;
   }
 
@@ -186,6 +213,45 @@ export class CustomerService {
     }
 
     return await customerRepository.updateAddress(addressId, customer.id, data);
+  }
+
+  public async getCustomersByUserBusinesses(
+    targetUserId: number,
+    requester: { id: number; role: UserRole; businessId?: number | null }
+  ) {
+    const isSelf = requester.id === targetUserId;
+    const isAdminOrOwner = [UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(requester.role);
+
+    if (!isSelf && !isAdminOrOwner) {
+      throw new AppError('Not authorized to view customers for this user', 403);
+    }
+
+    const links = await UserBusiness.findAll({
+      where: { user_id: targetUserId },
+      attributes: ['business_id'],
+    });
+
+    const businessIds = new Set<number>();
+    if (requester.businessId) {
+      businessIds.add(requester.businessId);
+    }
+    for (const link of links) {
+      if (link.business_id) {
+        businessIds.add(link.business_id);
+      }
+    }
+
+    if (businessIds.size === 0) {
+      return [];
+    }
+
+    const grouped = [];
+    for (const businessId of businessIds) {
+      const customers = await customerRepository.findAllWithOrders(businessId);
+      grouped.push({ business_id: businessId, customers });
+    }
+
+    return grouped;
   }
 }
 

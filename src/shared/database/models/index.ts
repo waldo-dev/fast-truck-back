@@ -19,10 +19,13 @@ import { Promotion } from './Promotion';
 import { PromotionProduct } from './PromotionProduct';
 import { ProductBusiness } from './ProductBusiness';
 import { PromotionBusiness } from './PromotionBusiness';
+import { EventProduct } from './EventProduct';
+import { EventOrganizer } from './EventOrganizer';
 import { User } from './User';
 import { Otp } from './Otp';
 import { PaymentConfig } from './PaymentConfig';
 import { UserBusiness } from './UserBusiness';
+import { BusinessOperatingContext } from './BusinessOperatingContext';
 import { initializeAssociations } from './associations';
 
 // Inicializar relaciones en un solo lugar
@@ -51,8 +54,11 @@ export {
   PromotionProduct,
   PromotionBusiness,
   ProductBusiness,
+  EventProduct,
+  EventOrganizer,
   User,
   UserBusiness,
+  BusinessOperatingContext,
   initializeAssociations,
 };
 

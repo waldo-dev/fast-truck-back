@@ -216,6 +216,32 @@ export class UserService {
 
     return updatedUser;
   }
+
+  public async getUsersByUserBusinesses(
+    targetUserId: number,
+    requester: { id: number; role: UserRole; businessId?: number | null }
+  ) {
+    const isSelf = requester.id === targetUserId;
+    const isAdminOrOwner = [UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(requester.role);
+
+    if (!isSelf && !isAdminOrOwner) {
+      throw new AppError('Not authorized to view users for this user', 403);
+    }
+
+    const { businessIds } = await userRepository.getUserWithBusinessIds(targetUserId);
+
+    if (businessIds.length === 0) {
+      return [];
+    }
+
+    const grouped = [];
+    for (const businessId of businessIds) {
+      const users = await userRepository.findAllByBusiness(businessId);
+      grouped.push({ business_id: businessId, users });
+    }
+
+    return grouped;
+  }
 }
 
 export const userService = new UserService();

@@ -1,14 +1,23 @@
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate, validateParams } from '../../shared/middlewares';
+import { authenticate, authorize, injectBusinessId, validate, validateParams, validateQuery } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { orderController } from './order.controller';
-import { createOrderSchema, updateOrderStatusSchema, orderParamsSchema } from './order.schemas';
+import { createOrderSchema, updateOrderStatusSchema, orderParamsSchema, orderUserParamsSchema, orderHistoryQuerySchema } from './order.schemas';
 
 const router = Router();
 
 // Todas las rutas requieren autenticación y business_id
 router.use(authenticate);
+
+// GET /orders/by-user/:userId - Listar pedidos de todos los negocios asociados a un usuario
+router.get('/by-user/:userId', validateParams(orderUserParamsSchema), orderController.getByUserBusinesses);
+// GET /orders/by-user/:userId/csv - Descargar CSV de pedidos de todos los negocios asociados a un usuario
+router.get('/by-user/:userId/csv', validateParams(orderUserParamsSchema), orderController.getByUserBusinessesCsv);
+
 router.use(injectBusinessId);
+
+// GET /orders/history - Historial con filtros (ADMIN, BUSINESS_OWNER, LOCAL_OPERATOR)
+router.get('/history', validateQuery(orderHistoryQuerySchema), orderController.getHistory);
 
 // GET /orders - Listar pedidos (ADMIN y LOCAL_OPERATOR pueden leer)
 // Query params: status, order_source, customer_id
@@ -24,7 +33,7 @@ router.post('/', validate(createOrderSchema), orderController.create);
 // PATCH /orders/:id/status - Actualizar estado del pedido (solo ADMIN)
 router.patch(
   '/:id/status',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
   validateParams(orderParamsSchema),
   validate(updateOrderStatusSchema),
   orderController.updateStatus

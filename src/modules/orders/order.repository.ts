@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
-import { Order, OrderItem, Product, ProductOption, Promotion, Customer, CustomerAddress, Event } from '../../shared/database/models';
+import { Order, OrderItem, Product, ProductOption, Promotion, Customer, CustomerAddress, Event, Payment } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
-import { OrderSource, OrderStatus, OrderType, DiscountType } from '../../shared/database/models/enums';
+import { OrderSource, OrderStatus, OrderType, DiscountType, PaymentMethod, PaymentStatus } from '../../shared/database/models/enums';
 
 export class OrderRepository {
   /**
@@ -142,6 +142,127 @@ export class OrderRepository {
     return orders;
   }
 
+  public async findByBusinessIds(businessIds: number[]) {
+    if (!businessIds || businessIds.length === 0) {
+      return [];
+    }
+
+    const orders = await Order.findAll({
+      where: {
+        business_id: {
+          [Op.in]: businessIds,
+        },
+      },
+      include: [
+        {
+          model: Customer,
+          as: 'customer',
+          attributes: ['id', 'name', 'phone'],
+        },
+        {
+          model: CustomerAddress,
+          as: 'address',
+          attributes: ['id', 'address'],
+        },
+        {
+          model: Event,
+          as: 'event',
+          attributes: ['id', 'name', 'event_date'],
+        },
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'price', 'image_url'],
+            },
+          ],
+        },
+      ],
+      order: [
+        ['business_id', 'ASC'],
+        ['created_at', 'DESC'],
+      ],
+    });
+
+    return orders;
+  }
+
+  public async findHistory(
+    businessId: number,
+    filters: {
+      startDate?: Date;
+      endDate?: Date;
+      status?: OrderStatus;
+      order_source?: OrderSource;
+      customer_id?: number;
+    }
+  ) {
+    console.log("🚀 ~ OrderRepository ~ findHistory ~ businessId:", businessId)
+    const where: any = {
+      business_id: businessId,
+    };
+
+    if (filters.startDate || filters.endDate) {
+      where.created_at = {};
+      if (filters.startDate) {
+        where.created_at[Op.gte] = filters.startDate;
+      }
+      if (filters.endDate) {
+        where.created_at[Op.lte] = filters.endDate;
+      }
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    if (filters.order_source) {
+      where.order_source = filters.order_source;
+    }
+
+    if (filters.customer_id) {
+      where.customer_id = filters.customer_id;
+    }
+
+    const orders = await Order.findAll({
+      where,
+      include: [
+        {
+          model: Customer,
+          as: 'customer',
+          attributes: ['id', 'name', 'phone'],
+        },
+        {
+          model: CustomerAddress,
+          as: 'address',
+          attributes: ['id', 'address'],
+        },
+        {
+          model: Event,
+          as: 'event',
+          attributes: ['id', 'name', 'event_date'],
+        },
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'price', 'image_url'],
+            },
+          ],
+        },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    return orders;
+  }
+
   public async findById(id: number, businessId: number) {
     const order = await Order.findOne({
       where: {
@@ -190,6 +311,7 @@ export class OrderRepository {
     customer_id: number;
     address_id?: number | null;
     event_id?: number | null;
+    payment_method?: PaymentMethod | null;
     order_source: OrderSource;
     order_type: OrderType;
     status?: OrderStatus;
@@ -291,11 +413,22 @@ export class OrderRepository {
       customer_id: data.customer_id,
       address_id: data.address_id || null,
       event_id: data.event_id || null,
+      payment_type: data.payment_method || null,
       order_source: data.order_source,
       order_type: data.order_type,
       status: data.status || OrderStatus.CREATED,
       total,
     });
+
+    // Crear payment si se envía método
+    if (data.payment_method) {
+      await Payment.create({
+        order_id: order.id,
+        payment_method: data.payment_method,
+        payment_status: PaymentStatus.PENDING,
+        amount: total,
+      });
+    }
 
     // Crear items
     await OrderItem.bulkCreate(

@@ -10,9 +10,40 @@ interface EventAttributes {
   event_date: Date | null;
   organizer: string | null;
   notes: string | null;
+  event_type: string | null;
+  expected_attendance: number | null;
+  weather_condition: string | null;
+  start_at: Date | null;
+  end_at: Date | null;
+  city: string | null;
+  district: string | null;
+  status: string | null;
+  closed_at: Date | null;
+  is_active: boolean | null;
 }
 
-interface EventCreationAttributes extends Optional<EventAttributes, 'id' | 'business_id' | 'location_id' | 'name' | 'description' | 'event_date' | 'organizer' | 'notes'> {}
+interface EventCreationAttributes
+  extends Optional<
+    EventAttributes,
+    | 'id'
+    | 'business_id'
+    | 'location_id'
+    | 'name'
+    | 'description'
+    | 'event_date'
+    | 'organizer'
+    | 'notes'
+    | 'event_type'
+    | 'expected_attendance'
+    | 'weather_condition'
+    | 'start_at'
+    | 'end_at'
+    | 'city'
+    | 'district'
+    | 'status'
+    | 'closed_at'
+    | 'is_active'
+  > {}
 
 export class Event extends Model<EventAttributes, EventCreationAttributes> implements EventAttributes {
   public id!: number;
@@ -23,6 +54,16 @@ export class Event extends Model<EventAttributes, EventCreationAttributes> imple
   public event_date!: Date | null;
   public organizer!: string | null;
   public notes!: string | null;
+  public event_type!: string | null;
+  public expected_attendance!: number | null;
+  public weather_condition!: string | null;
+  public start_at!: Date | null;
+  public end_at!: Date | null;
+  public city!: string | null;
+  public district!: string | null;
+  public status!: string | null;
+  public closed_at!: Date | null;
+  public is_active!: boolean | null;
 }
 
 Event.init(
@@ -67,6 +108,47 @@ Event.init(
     notes: {
       type: DataTypes.TEXT,
       allowNull: true,
+    },
+    event_type: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    expected_attendance: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+    },
+    weather_condition: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    start_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    end_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    city: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    district: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    status: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    closed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: true,
     },
   },
   {

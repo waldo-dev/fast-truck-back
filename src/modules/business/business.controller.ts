@@ -4,6 +4,7 @@ import { AppError } from '../../shared/errors';
 import { AuthRequest } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { businessService } from './business.service';
+import { z } from 'zod';
 
 type FileAuthRequest = AuthRequest & { file?: Express.Multer.File };
 
@@ -224,6 +225,64 @@ export class BusinessController {
       res.status(200).json({
         success: true,
         message: 'Business deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getOperatingContext = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.business_id || !req.user) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'Business ID and user are required' },
+        });
+        return;
+      }
+
+      const context = await businessService.getOperatingContext(req.business_id);
+
+      res.status(200).json({
+        success: true,
+        data: context,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public updateOperatingContext = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.business_id || !req.user) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'Business ID and user are required' },
+        });
+        return;
+      }
+
+      const schema = z.object({
+        mode: z.enum(['LOCAL', 'EVENT']),
+        location_id: z.number().int().positive().optional(),
+        event_id: z.number().int().positive().optional(),
+      });
+
+      const parsed = schema.parse(req.body);
+
+      const context = await businessService.updateOperatingContext(
+        req.business_id,
+        {
+          mode: parsed.mode,
+          location_id: parsed.location_id,
+          event_id: parsed.event_id,
+        },
+        req.user.role as UserRole
+      );
+
+      res.status(200).json({
+        success: true,
+        data: context,
       });
     } catch (error) {
       next(error);

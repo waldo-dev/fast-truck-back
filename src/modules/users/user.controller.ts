@@ -4,6 +4,45 @@ import { UserRole } from '../../shared/database/models/enums';
 import { userService } from './user.service';
 
 export class UserController {
+  public getByUserBusinesses = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'User is required',
+          },
+        });
+        return;
+      }
+
+      const userId = parseInt(req.params.userId, 10);
+
+      if (isNaN(userId)) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Invalid user ID',
+          },
+        });
+        return;
+      }
+
+      const data = await userService.getUsersByUserBusinesses(userId, {
+        id: req.user.id,
+        role: req.user.role as UserRole,
+        businessId: req.user.business_id,
+      });
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public getByBusiness = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {

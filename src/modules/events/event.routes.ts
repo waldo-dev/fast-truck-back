@@ -17,8 +17,13 @@ router.get('/', eventController.getAll);
 // GET /events/:id - Detalle evento (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/:id', validateParams(eventParamsSchema), eventController.getById);
 
-// POST /events - Crear evento (solo ADMIN)
-router.post('/', authorize(UserRole.ADMIN), validate(createEventSchema), eventController.create);
+// POST /events - Crear evento (ADMIN, BUSINESS_OWNER, LOCAL_OPERATOR)
+router.post(
+  '/',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
+  validate(createEventSchema),
+  eventController.create
+);
 
 export default router;
 

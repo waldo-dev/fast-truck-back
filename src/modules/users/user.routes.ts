@@ -9,6 +9,7 @@ import {
   updateUserSchema,
   updatePasswordSchema,
   userParamsSchema,
+  userBusinessParamsSchema,
 } from './user.schemas';
 
 const router = Router();
@@ -30,6 +31,9 @@ router.get(
   validateQuery(adminsOwnersQuerySchema),
   userController.getAdminsAndOwners
 );
+
+// GET /users/by-user/:userId - Listar usuarios de todos los negocios asociados a un usuario
+router.get('/by-user/:userId', validateParams(userBusinessParamsSchema), userController.getByUserBusinesses);
 
 // Rutas que requieren business_id inyectado (scoping ADMIN/LOCAL_OPERATOR)
 router.use(injectBusinessId);

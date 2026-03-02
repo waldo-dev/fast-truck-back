@@ -21,6 +21,9 @@ import { PromotionBusiness } from './PromotionBusiness';
 import { User } from './User';
 import { UserBusiness } from './UserBusiness';
 import { ProductBusiness } from './ProductBusiness';
+import { EventProduct } from './EventProduct';
+import { EventOrganizer } from './EventOrganizer';
+import { BusinessOperatingContext } from './BusinessOperatingContext';
 
 let associationsInitialized = false;
 
@@ -38,6 +41,7 @@ export const initializeAssociations = (): void => {
   Business.hasMany(Order, { foreignKey: 'business_id', as: 'orders' });
   Business.hasMany(InventoryMovement, { foreignKey: 'business_id', as: 'inventoryMovements' });
   Business.hasMany(PaymentConfig, { foreignKey: 'business_id', as: 'paymentConfigs' });
+  Business.hasOne(BusinessOperatingContext, { foreignKey: 'business_id', as: 'operatingContext' });
 
   // Category relations
   Category.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
@@ -112,6 +116,7 @@ export const initializeAssociations = (): void => {
     as: 'linkedBusinesses',
   });
   Product.hasMany(ProductBusiness, { foreignKey: 'product_id', as: 'productBusinesses' });
+  Product.belongsToMany(Event, { through: EventProduct, foreignKey: 'product_id', otherKey: 'event_id', as: 'events' });
 
   // ProductOption relations
   ProductOption.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
@@ -139,6 +144,16 @@ export const initializeAssociations = (): void => {
   PromotionProduct.belongsTo(Promotion, { foreignKey: 'promotion_id', as: 'promotion' });
   PromotionProduct.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 
+  // Event-Product relations
+  Event.belongsToMany(Product, { through: EventProduct, foreignKey: 'event_id', otherKey: 'product_id', as: 'products' });
+  Event.hasMany(EventProduct, { foreignKey: 'event_id', as: 'eventProducts' });
+  EventProduct.belongsTo(Event, { foreignKey: 'event_id', as: 'event' });
+  EventProduct.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
+  // Event-Organizer relations
+  Event.hasMany(EventOrganizer, { foreignKey: 'event_id', as: 'organizers' });
+  EventOrganizer.belongsTo(Event, { foreignKey: 'event_id', as: 'event' });
+
   // User relations
   User.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
   Business.hasMany(User, { foreignKey: 'business_id', as: 'users' });
@@ -146,6 +161,10 @@ export const initializeAssociations = (): void => {
   // User-Business (many-to-many) relations
   User.belongsToMany(Business, { through: UserBusiness, foreignKey: 'user_id', as: 'businesses' });
   Business.belongsToMany(User, { through: UserBusiness, foreignKey: 'business_id', as: 'members' });
+
+  BusinessOperatingContext.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
+  BusinessOperatingContext.belongsTo(Location, { foreignKey: 'location_id', as: 'location' });
+  BusinessOperatingContext.belongsTo(Event, { foreignKey: 'event_id', as: 'event' });
 
   // ProductBusiness relations (enlace producto-negocio)
   ProductBusiness.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });

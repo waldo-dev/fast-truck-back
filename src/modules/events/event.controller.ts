@@ -17,8 +17,9 @@ export class EventController {
       }
 
       const futureOnly = req.query.future === 'true';
+      const isActive = typeof req.query.is_active === 'string' ? req.query.is_active === 'true' : undefined;
 
-      const events = await eventService.getAllEvents(req.business_id, futureOnly);
+      const events = await eventService.getAllEvents(req.business_id, futureOnly, isActive);
 
       res.status(200).json({
         success: true,
@@ -76,7 +77,26 @@ export class EventController {
         return;
       }
 
-      const { location_id, name, description, event_date, organizer, notes } = req.body;
+      const {
+        location_id,
+        name,
+        description,
+        event_date,
+        organizer,
+        notes,
+        event_type,
+        expected_attendance,
+        weather_condition,
+        start_at,
+        end_at,
+        city,
+        district,
+        status,
+        closed_at,
+        is_active,
+        product_ids,
+        organizers,
+      } = req.body;
 
       const event = await eventService.createEvent(
         {
@@ -86,6 +106,18 @@ export class EventController {
           event_date,
           organizer,
           notes,
+          event_type,
+          expected_attendance,
+          weather_condition,
+          start_at,
+          end_at,
+          city,
+          district,
+          status,
+          closed_at,
+          is_active,
+          product_ids,
+          organizers,
         },
         req.business_id,
         req.user.role as UserRole

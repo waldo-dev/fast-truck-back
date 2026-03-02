@@ -30,6 +30,10 @@ export const businessParamsSchema = z.object({
   businessId: z.string().regex(/^\d+$/, 'ID must be a number').transform(Number),
 });
 
+export const userBusinessParamsSchema = z.object({
+  userId: z.string().regex(/^\d+$/, 'User ID must be a number').transform(Number),
+});
+
 export const adminsOwnersQuerySchema = z.object({
   business_id: z
     .string()

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OrderSource, OrderStatus, OrderType } from '../../shared/database/models/enums';
+import { OrderSource, OrderStatus, OrderType, PaymentMethod } from '../../shared/database/models/enums';
 
 const customerAddressSchema = z.object({
   address: z.string().min(1, 'Address is required'),
@@ -9,7 +9,7 @@ const customerAddressSchema = z.object({
 
 const customerSchema = z.object({
   name: z.string().min(1, 'Customer name is required'),
-  phone: z.string().min(6, 'Phone is too short'),
+  phone: z.string().min(6, 'Phone is too short').optional().nullable(),
   notes: z.string().max(500, 'Notes too long').optional().nullable(),
   address: customerAddressSchema.optional(),
 });
@@ -21,11 +21,12 @@ export const createOrderSchema = z
     address_id: z.number().int().positive('Address ID must be a positive integer').optional().nullable(),
     event_id: z.number().int().positive('Event ID must be a positive integer').optional().nullable(),
     order_source: z.nativeEnum(OrderSource, {
-      errorMap: () => ({ message: 'Order source must be POS, WHATSAPP, or ONLINE' }),
+      errorMap: () => ({ message: 'Order source must be POS, WHATSAPP, ONLINE, or EVENT' }),
     }),
     order_type: z.nativeEnum(OrderType, {
       errorMap: () => ({ message: 'Order type must be DELIVERY, PICKUP, or LOCAL' }),
     }),
+    payment_method: z.nativeEnum(PaymentMethod).optional(),
     status: z.nativeEnum(OrderStatus).optional(),
     items: z
       .array(
@@ -68,6 +69,32 @@ export const updateOrderStatusSchema = z.object({
 
 export const orderParamsSchema = z.object({
   id: z.string().regex(/^\d+$/, 'ID must be a number').transform(Number),
+});
+
+export const orderUserParamsSchema = z.object({
+  userId: z.string().regex(/^\d+$/, 'User ID must be a number').transform(Number),
+});
+
+const dateOrDateTime = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}(T.+)?$/, 'Must be YYYY-MM-DD or ISO datetime')
+  .optional();
+
+export const orderHistoryQuerySchema = z.object({
+  start_date: dateOrDateTime,
+  end_date: dateOrDateTime,
+  status: z.nativeEnum(OrderStatus).optional(),
+  order_source: z.nativeEnum(OrderSource).optional(),
+  customer_id: z
+    .string()
+    .regex(/^\d+$/, 'customer_id must be a number')
+    .transform(Number)
+    .optional(),
+  business_id: z
+    .string()
+    .regex(/^\d+$/, 'business_id must be a number')
+    .transform(Number)
+    .optional(),
 });
 
 

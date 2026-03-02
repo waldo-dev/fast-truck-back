@@ -254,6 +254,82 @@ export class OrderController {
     }
   };
 
+  public getCloseout = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.business_id || !req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'Business ID and user are required',
+          },
+        });
+        return;
+      }
+
+      const allowedRoles = [UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR];
+      if (!allowedRoles.includes(req.user.role as UserRole)) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'Not authorized to view closeout',
+          },
+        });
+        return;
+      }
+
+      const { start_date, end_date, vat_rate } = req.query as {
+        start_date?: string;
+        end_date?: string;
+        vat_rate?: string | number;
+      };
+
+      const parseBoundary = (value?: string, isStart?: boolean): Date | undefined => {
+        if (!value) return undefined;
+        const date = new Date(value);
+        if (isNaN(date.getTime())) return undefined;
+        if (value.length === 10) {
+          if (isStart) {
+            date.setHours(0, 0, 0, 0);
+          } else {
+            date.setHours(23, 59, 59, 999);
+          }
+        }
+        return date;
+      };
+
+      const filters: {
+        startDate?: Date;
+        endDate?: Date;
+        vatRate?: number;
+      } = {};
+
+      const parsedStart = parseBoundary(start_date, true);
+      const parsedEnd = parseBoundary(end_date, false);
+
+      if (parsedStart) {
+        filters.startDate = parsedStart;
+      }
+      if (parsedEnd) {
+        filters.endDate = parsedEnd;
+      }
+      if (vat_rate !== undefined) {
+        const rate = typeof vat_rate === 'string' ? parseFloat(vat_rate) : vat_rate;
+        if (!isNaN(rate)) {
+          filters.vatRate = rate;
+        }
+      }
+
+      const summary = await orderService.getCloseout(req.business_id, filters);
+
+      res.status(200).json({
+        success: true,
+        data: summary,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public getAll = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.business_id) {

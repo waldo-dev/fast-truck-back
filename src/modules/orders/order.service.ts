@@ -168,6 +168,17 @@ export class OrderService {
     return orderRepository.findHistory(businessId, filters);
   }
 
+  public async getCloseout(
+    businessId: number,
+    filters: {
+      startDate?: Date;
+      endDate?: Date;
+      vatRate?: number;
+    }
+  ) {
+    return orderRepository.findCloseout(businessId, filters);
+  }
+
   public async getOrdersByUserBusinesses(userId: number) {
     const userBusinesses = await UserBusiness.findAll({
       where: {

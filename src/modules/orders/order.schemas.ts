@@ -97,4 +97,14 @@ export const orderHistoryQuerySchema = z.object({
     .optional(),
 });
 
+export const orderCloseoutQuerySchema = z.object({
+  start_date: dateOrDateTime,
+  end_date: dateOrDateTime,
+  vat_rate: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/, 'vat_rate must be a number')
+    .transform((v) => parseFloat(v))
+    .optional(),
+});
+
 

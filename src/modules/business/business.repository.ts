@@ -1,5 +1,7 @@
-import { Business, UserBusiness, BusinessOperatingContext } from '../../shared/database/models';
+import { Business, UserBusiness, BusinessOperatingContext, Order, Product, Customer } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
+import { Op, fn, col } from 'sequelize';
+import { OrderStatus } from '../../shared/database/models/enums';
 
 export class BusinessRepository {
   public async findAll(businessId: number) {
@@ -131,6 +133,73 @@ export class BusinessRepository {
     );
 
     return context;
+  }
+
+  public async getDashboardTotals(businessIds: number[], todayStart: Date, todayEnd: Date) {
+    const [totalOrders, todayOrders, activeProducts] = await Promise.all([
+      Order.count({
+        where: { business_id: { [Op.in]: businessIds } },
+      }),
+      Order.count({
+        where: {
+          business_id: { [Op.in]: businessIds },
+          created_at: { [Op.between]: [todayStart, todayEnd] },
+        },
+      }),
+      Product.count({
+        where: {
+          business_id: { [Op.in]: businessIds },
+          status: 'ACTIVE',
+        },
+      }),
+    ]);
+
+    return {
+      total_orders: totalOrders,
+      today_orders: todayOrders,
+      active_products: activeProducts,
+    };
+  }
+
+  public async getRecentOrders(businessIds: number[], limit = 10) {
+    const orders = await Order.findAll({
+      where: { business_id: { [Op.in]: businessIds } },
+      include: [
+        {
+          model: Business,
+          as: 'business',
+          attributes: ['id', 'name', 'brand_name', 'logo_url'],
+        },
+        {
+          model: Customer,
+          as: 'customer',
+          attributes: ['id', 'name', 'phone'],
+        },
+      ],
+      order: [['created_at', 'DESC']],
+      limit,
+    });
+
+    return orders;
+  }
+
+  public async getTopBusinessesBySales(businessIds: number[], limit = 5) {
+    const rows = await Order.findAll({
+      where: {
+        business_id: { [Op.in]: businessIds },
+        status: { [Op.ne]: OrderStatus.CANCELLED },
+      },
+      attributes: [
+        'business_id',
+        [fn('COUNT', col('id')), 'order_count'],
+        [fn('SUM', col('total')), 'total_sales'],
+      ],
+      group: ['business_id'],
+      order: [[fn('SUM', col('total')), 'DESC']],
+      limit,
+    });
+
+    return rows;
   }
 }
 

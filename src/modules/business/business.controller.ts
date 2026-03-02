@@ -33,6 +33,69 @@ export class BusinessController {
     }
   };
 
+  public getDashboardOverview = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          error: { message: 'Unauthorized' },
+        });
+        return;
+      }
+
+      const data = await businessService.getDashboardOverview(req.user.id);
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getDashboardRecentOrders = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          error: { message: 'Unauthorized' },
+        });
+        return;
+      }
+
+      const data = await businessService.getDashboardRecentOrders(req.user.id);
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getDashboardTopBusinesses = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          error: { message: 'Unauthorized' },
+        });
+        return;
+      }
+
+      const data = await businessService.getDashboardTopBusinesses(req.user.id);
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public getById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.business_id) {

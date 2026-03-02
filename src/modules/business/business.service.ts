@@ -105,6 +105,48 @@ export class BusinessService {
 
     return context;
   }
+
+  public async getDashboardOverview(userId: number) {
+    const businesses = await businessRepository.findByUser(userId);
+    const businessIds = businesses.map((b) => b.id);
+
+    if (!businessIds.length) {
+      return {
+        businesses: [],
+        totals: {
+          total_orders: 0,
+          today_orders: 0,
+          active_products: 0,
+        },
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(today);
+    end.setHours(23, 59, 59, 999);
+
+    const totals = await businessRepository.getDashboardTotals(businessIds, today, end);
+
+    return {
+      businesses,
+      totals,
+    };
+  }
+
+  public async getDashboardRecentOrders(userId: number) {
+    const businesses = await businessRepository.findByUser(userId);
+    const businessIds = businesses.map((b) => b.id);
+    if (!businessIds.length) return [];
+    return businessRepository.getRecentOrders(businessIds, 10);
+  }
+
+  public async getDashboardTopBusinesses(userId: number) {
+    const businesses = await businessRepository.findByUser(userId);
+    const businessIds = businesses.map((b) => b.id);
+    if (!businessIds.length) return [];
+    return businessRepository.getTopBusinessesBySales(businessIds, 5);
+  }
 }
 
 export const businessService = new BusinessService();

@@ -14,6 +14,11 @@ router.use(injectBusinessId);
 // GET /business - Listar business asociados al usuario autenticado
 router.get('/', businessController.getAll);
 
+// Dashboard / inicio
+router.get('/dashboard/overview', businessController.getDashboardOverview);
+router.get('/dashboard/recent-orders', businessController.getDashboardRecentOrders);
+router.get('/dashboard/top-businesses', businessController.getDashboardTopBusinesses);
+
 // GET /business/:id - Obtener business por ID (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/:id', businessController.getById);
 

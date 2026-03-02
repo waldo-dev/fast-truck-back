@@ -1,7 +1,14 @@
 import { Op } from 'sequelize';
 import { Order, OrderItem, Product, ProductOption, Promotion, Customer, CustomerAddress, Event, Payment } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
-import { OrderSource, OrderStatus, OrderType, DiscountType, PaymentMethod, PaymentStatus } from '../../shared/database/models/enums';
+import {
+  OrderSource,
+  OrderStatus,
+  OrderType,
+  DiscountType,
+  PaymentMethod,
+  PaymentStatus,
+} from '../../shared/database/models/enums';
 
 export class OrderRepository {
   /**
@@ -261,6 +268,99 @@ export class OrderRepository {
     });
 
     return orders;
+  }
+
+  public async findCloseout(
+    businessId: number,
+    filters: {
+      startDate?: Date;
+      endDate?: Date;
+      vatRate?: number;
+    }
+  ) {
+    const where: any = {
+      business_id: businessId,
+    };
+
+    if (filters.startDate || filters.endDate) {
+      where.created_at = {};
+      if (filters.startDate) {
+        where.created_at[Op.gte] = filters.startDate;
+      }
+      if (filters.endDate) {
+        where.created_at[Op.lte] = filters.endDate;
+      }
+    }
+
+    const orders = await Order.findAll({
+      where,
+      attributes: ['id', 'total', 'status', 'payment_type', 'created_at'],
+      include: [
+        {
+          model: Payment,
+          as: 'payments',
+          attributes: ['payment_method', 'payment_status', 'amount'],
+        },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    let grossSales = 0;
+    let netSales = 0;
+    let taxes = 0;
+    let cancelledSales = 0;
+    let cancelledCount = 0;
+    let receiptCount = 0;
+    let discounts = 0; // No se almacenan descuentos explícitos; queda en 0
+
+    const paymentBreakdown: Record<string, number> = {
+      CASH: 0,
+      CARD: 0,
+      TRANSFER: 0,
+      WEBPAY: 0,
+      OTHER: 0,
+    };
+
+    const vatRate = filters.vatRate ?? 0.19;
+
+    for (const order of orders) {
+      const isCancelled = order.status === OrderStatus.CANCELLED;
+      if (isCancelled) {
+        cancelledSales += order.total;
+        cancelledCount += 1;
+        continue;
+      }
+
+      grossSales += order.total;
+      receiptCount += 1;
+
+      const payments = (order as any).payments as Array<Payment>;
+      if (payments && payments.length > 0) {
+        for (const payment of payments) {
+          if (payment.payment_status === PaymentStatus.FAILED) continue;
+          const method = payment.payment_method || 'OTHER';
+          paymentBreakdown[method] = (paymentBreakdown[method] || 0) + (payment.amount || 0);
+        }
+      } else if (order.payment_type) {
+        const method = order.payment_type || 'OTHER';
+        paymentBreakdown[method] = (paymentBreakdown[method] || 0) + order.total;
+      }
+    }
+
+    netSales = vatRate > 0 ? grossSales / (1 + vatRate) : grossSales;
+    taxes = grossSales - netSales;
+
+    return {
+      gross_sales: grossSales,
+      net_sales: netSales,
+      taxes,
+      vat_rate: vatRate,
+      receipt_count: receiptCount,
+      cancelled_sales: cancelledSales,
+      cancelled_count: cancelledCount,
+      discounts_applied: discounts,
+      payment_breakdown: paymentBreakdown,
+    };
   }
 
   public async findById(id: number, businessId: number) {

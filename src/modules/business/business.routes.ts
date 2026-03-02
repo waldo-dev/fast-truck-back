@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { authenticate, authorize, injectBusinessId, validate } from '../../shared/middlewares';
+import { authenticate, authorize, injectBusinessId } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { businessController } from './business.controller';
 

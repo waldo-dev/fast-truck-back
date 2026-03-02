@@ -2,7 +2,6 @@ import { AppError } from '../../shared/errors';
 import { UserRole } from '../../shared/database/models/enums';
 import { businessRepository } from './business.repository';
 import { UserBusiness } from '../../shared/database/models/UserBusiness';
-import { BusinessOperatingContext } from '../../shared/database/models';
 
 export class BusinessService {
   public async getAllbusiness(businessId: number) {

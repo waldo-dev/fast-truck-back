@@ -75,7 +75,7 @@ export class CustomerController {
 
       const data = await customerService.getCustomersByUserBusinesses(userId, {
         id: req.user.id,
-        role: req.user.role,
+        role: req.user.role as UserRole,
         businessId: req.user.business_id,
       });
 
@@ -114,7 +114,7 @@ export class CustomerController {
 
       const data = await customerService.getCustomersByUserBusinesses(userId, {
         id: req.user.id,
-        role: req.user.role,
+        role: req.user.role as UserRole,
         businessId: req.user.business_id,
       });
 

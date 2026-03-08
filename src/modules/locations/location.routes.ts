@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate } from '../../shared/middlewares';
+import { authenticate, authorize, injectBusinessId, validate, demoReadOnlyGuard, subscriptionGuard } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { locationController } from './location.controller';
 import { createLocationSchema } from './location.schemas';
@@ -14,7 +14,14 @@ router.use(injectBusinessId);
 router.get('/', locationController.getAll);
 
 // POST /locations - Crear local (solo ADMIN)
-router.post('/', authorize(UserRole.ADMIN), validate(createLocationSchema), locationController.create);
+router.post(
+  '/',
+  authorize(UserRole.ADMIN),
+  demoReadOnlyGuard,
+  subscriptionGuard('locations'),
+  validate(createLocationSchema),
+  locationController.create
+);
 
 export default router;
 

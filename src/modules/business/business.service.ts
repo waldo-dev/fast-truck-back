@@ -2,6 +2,9 @@ import { AppError } from '../../shared/errors';
 import { UserRole } from '../../shared/database/models/enums';
 import { businessRepository } from './business.repository';
 import { UserBusiness } from '../../shared/database/models/UserBusiness';
+import { subscriptionRepository } from '../subscriptions/subscription.repository';
+import { SubscriptionStatus } from '../../shared/database/models/enums';
+import { Plan } from '../../shared/database/models';
 
 export class BusinessService {
   public async getAllbusiness(businessId: number) {
@@ -30,6 +33,9 @@ export class BusinessService {
       logo_url?: string | null;
       primary_color?: string | null;
       secondary_color?: string | null;
+      created_by_user_id?: number | null;
+      plan_id?: number | string;
+      billing_period?: 'monthly' | 'yearly';
     },
     userRole: UserRole,
     userId: number
@@ -39,10 +45,56 @@ export class BusinessService {
       throw new AppError('Only ADMIN or BUSINESS_OWNER can create business', 403);
     }
 
-    const business = await businessRepository.create(data);
+    const business = await businessRepository.create({
+      ...data,
+      created_by_user_id: userId,
+    });
 
     // Asociar al usuario creador en la tabla intermedia
     await UserBusiness.create({ user_id: userId, business_id: business.id });
+
+    // Crear suscripción:
+    // - Si viene plan_id, se crea suscripción ACTIVE con periodo según billing_period (monthly/yearly)
+    // - Si no, se crea trial de 30 días en plan Pro (o primer plan disponible)
+    const now = new Date();
+    if (data.plan_id) {
+      const planIdNum = typeof data.plan_id === 'string' ? parseInt(data.plan_id, 10) : data.plan_id;
+      const plan = await Plan.findByPk(planIdNum);
+      if (!plan) {
+        throw new AppError('Plan not found', 400);
+      }
+
+      const periodEnd = new Date(now);
+      if (data.billing_period === 'yearly') {
+        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      } else {
+        // monthly por defecto
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+      }
+
+      await subscriptionRepository.create({
+        business_id: business.id,
+        plan_id: plan.id,
+        status: SubscriptionStatus.ACTIVE,
+        current_period_start: now,
+        current_period_end: periodEnd,
+      });
+    } else {
+      const trialEnds = new Date(now);
+      trialEnds.setDate(trialEnds.getDate() + 30);
+
+      const proPlan = await Plan.findOne({ where: { name: 'Pro' } });
+      const fallbackPlan = proPlan || (await Plan.findOne({ order: [['id', 'ASC']] }));
+
+      if (fallbackPlan) {
+        await subscriptionRepository.create({
+          business_id: business.id,
+          plan_id: fallbackPlan.id,
+          status: SubscriptionStatus.TRIAL,
+          trial_ends_at: trialEnds,
+        });
+      }
+    }
     return business;
   }
 

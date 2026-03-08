@@ -172,12 +172,13 @@ export class OrderController {
         return;
       }
 
-      const { start_date, end_date, status, order_source, customer_id, business_id } = req.query as {
+      const { start_date, end_date, status, order_source, customer_id, event_id, business_id } = req.query as {
         start_date?: string;
         end_date?: string;
         status?: OrderStatus;
         order_source?: OrderSource;
         customer_id?: string;
+        event_id?: string;
         business_id?: string;
       };
 
@@ -202,6 +203,7 @@ export class OrderController {
         status?: OrderStatus;
         order_source?: OrderSource;
         customer_id?: number;
+        event_id?: number;
       } = {};
 
       const parsedStart = parseBoundary(start_date, true);
@@ -221,6 +223,9 @@ export class OrderController {
       }
       if (customer_id && !isNaN(parseInt(customer_id, 10))) {
         filters.customer_id = parseInt(customer_id, 10);
+      }
+      if (event_id && !isNaN(parseInt(event_id, 10))) {
+        filters.event_id = parseInt(event_id, 10);
       }
 
       const requestedBusinessId = business_id ? parseInt(business_id, 10) : undefined;
@@ -332,7 +337,10 @@ export class OrderController {
 
   public getAll = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id) {
+      const requestedBusinessId = req.query.business_id ? parseInt(req.query.business_id as string, 10) : undefined;
+      const businessId = requestedBusinessId ?? req.business_id;
+
+      if (!businessId || isNaN(businessId)) {
         res.status(403).json({
           success: false,
           error: {
@@ -345,8 +353,9 @@ export class OrderController {
       const status = req.query.status as OrderStatus | undefined;
       const order_source = req.query.order_source as OrderSource | undefined;
       const customer_id = req.query.customer_id ? parseInt(req.query.customer_id as string, 10) : undefined;
+      const event_id = req.query.event_id ? parseInt(req.query.event_id as string, 10) : undefined;
 
-      const filters: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number } = {};
+      const filters: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number; event_id?: number } = {};
       if (status && Object.values(OrderStatus).includes(status)) {
         filters.status = status;
       }
@@ -356,8 +365,11 @@ export class OrderController {
       if (customer_id && !isNaN(customer_id)) {
         filters.customer_id = customer_id;
       }
+      if (event_id && !isNaN(event_id)) {
+        filters.event_id = event_id;
+      }
 
-      const orders = await orderService.getAllOrders(req.business_id, filters);
+      const orders = await orderService.getAllOrders(businessId, filters);
 
       res.status(200).json({
         success: true,

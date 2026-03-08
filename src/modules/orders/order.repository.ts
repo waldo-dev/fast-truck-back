@@ -96,7 +96,10 @@ export class OrderRepository {
     return itemPrice * quantity;
   }
 
-  public async findAll(businessId: number, filters?: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number }) {
+  public async findAll(
+    businessId: number,
+    filters?: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number; event_id?: number }
+  ) {
     const where: any = {
       business_id: businessId,
     };
@@ -111,6 +114,13 @@ export class OrderRepository {
 
     if (filters?.customer_id) {
       where.customer_id = filters.customer_id;
+    }
+
+    if (filters?.event_id) {
+      where.event_id = filters.event_id;
+    } else {
+      // Por defecto no devolver órdenes asociadas a eventos
+      where.event_id = null;
     }
 
     const orders = await Order.findAll({
@@ -205,6 +215,7 @@ export class OrderRepository {
       status?: OrderStatus;
       order_source?: OrderSource;
       customer_id?: number;
+      event_id?: number;
     }
   ) {
     console.log("🚀 ~ OrderRepository ~ findHistory ~ businessId:", businessId)
@@ -232,6 +243,10 @@ export class OrderRepository {
 
     if (filters.customer_id) {
       where.customer_id = filters.customer_id;
+    }
+
+    if (filters.event_id) {
+      where.event_id = filters.event_id;
     }
 
     const orders = await Order.findAll({
@@ -316,6 +331,8 @@ export class OrderRepository {
     const paymentBreakdown: Record<string, number> = {
       CASH: 0,
       CARD: 0,
+      DEBIT_CARD: 0,
+      CREDIT_CARD: 0,
       TRANSFER: 0,
       WEBPAY: 0,
       OTHER: 0,

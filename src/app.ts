@@ -17,6 +17,8 @@ import paymentRoutes from './modules/payments/payment.routes';
 import paymentConfigRoutes from './modules/payment-configs/payment-config.routes';
 import mailingRoutes from './modules/mailing/mailing.routes';
 import publicRoutes from './modules/public/public.routes';
+import planRoutes from './modules/plans/plan.routes';
+import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 
 const createApp = (): Application => {
   const app = express();
@@ -65,6 +67,8 @@ const createApp = (): Application => {
   app.use('/payment-configs', paymentConfigRoutes);
   app.use('/mailing', mailingRoutes);
   app.use('/public', publicRoutes);
+  app.use('/plans', planRoutes);
+  app.use('/subscriptions', subscriptionRoutes);
 
   // Error handlers (deben ir al final)
   app.use(notFoundHandler);

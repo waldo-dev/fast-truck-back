@@ -6,6 +6,8 @@ import {
   injectBusinessId,
   validate,
   validateParams,
+  demoReadOnlyGuard,
+  subscriptionGuard,
 } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { productController } from './product.controller';
@@ -70,6 +72,8 @@ router.get(
 router.post(
   '/',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  demoReadOnlyGuard,
+  subscriptionGuard('products'),
   upload.single('image'),
   validate(createProductSchema),
   productController.create

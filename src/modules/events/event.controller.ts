@@ -96,6 +96,8 @@ export class EventController {
         is_active,
         product_ids,
         organizers,
+        address,
+        location_name,
       } = req.body;
 
       const event = await eventService.createEvent(
@@ -104,7 +106,7 @@ export class EventController {
           name,
           description,
           event_date,
-          organizer,
+          organizer: organizer?.name,
           notes,
           event_type,
           expected_attendance,
@@ -118,6 +120,8 @@ export class EventController {
           is_active,
           product_ids,
           organizers,
+          address,
+          location_name,
         },
         req.business_id,
         req.user.role as UserRole

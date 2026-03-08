@@ -193,6 +193,8 @@ export class UserController {
         return;
       }
 
+      console.log('POST /users payload:', req.body);
+
       const { email, password, name, role, business_ids } = req.body as {
         email: string;
         password: string;

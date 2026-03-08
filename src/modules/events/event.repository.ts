@@ -122,14 +122,10 @@ export class EventRepository {
       }
     }
 
+    // Para DATEONLY no convertir a Date; guardar la cadena YYYY-MM-DD tal cual
     const eventPayload = {
       ...data,
-      event_date:
-        data.event_date === null
-          ? null
-          : data.event_date
-            ? new Date(data.event_date)
-            : undefined,
+      event_date: data.event_date === null ? null : data.event_date ?? undefined,
     };
 
     const event = await Event.create(eventPayload);

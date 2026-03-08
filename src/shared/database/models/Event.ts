@@ -7,7 +7,8 @@ interface EventAttributes {
   location_id: number | null;
   name: string | null;
   description: string | null;
-  event_date: Date | null;
+  // DATEONLY en Sequelize se maneja como string (YYYY-MM-DD)
+  event_date: string | null;
   organizer: string | null;
   notes: string | null;
   event_type: string | null;
@@ -51,7 +52,7 @@ export class Event extends Model<EventAttributes, EventCreationAttributes> imple
   public location_id!: number | null;
   public name!: string | null;
   public description!: string | null;
-  public event_date!: Date | null;
+  public event_date!: string | null;
   public organizer!: string | null;
   public notes!: string | null;
   public event_type!: string | null;

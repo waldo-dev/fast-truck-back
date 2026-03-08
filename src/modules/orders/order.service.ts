@@ -7,7 +7,7 @@ import { customerRepository } from '../customers/customer.repository';
 export class OrderService {
   public async getAllOrders(
     businessId: number,
-    filters?: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number }
+    filters?: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number; event_id?: number }
   ) {
     const orders = await orderRepository.findAll(businessId, filters);
     return orders;
@@ -50,6 +50,11 @@ export class OrderService {
     // Validar permisos: LOCAL_OPERATOR solo puede crear pedidos WHATSAPP
     if (userRole === UserRole.LOCAL_OPERATOR && data.order_source !== OrderSource.WHATSAPP) {
       throw new AppError('LOCAL_OPERATOR can only create WHATSAPP orders', 403);
+    }
+
+    // Si el origen es EVENT, el event_id es obligatorio
+    if (data.order_source === OrderSource.EVENT && !data.event_id) {
+      throw new AppError('event_id is required for EVENT orders', 400);
     }
 
     // Obtener o crear customer
@@ -163,6 +168,7 @@ export class OrderService {
       status?: OrderStatus;
       order_source?: OrderSource;
       customer_id?: number;
+      event_id?: number;
     }
   ) {
     return orderRepository.findHistory(businessId, filters);

@@ -39,6 +39,8 @@ export class LocationController {
         return;
       }
 
+      console.log('POST /locations payload:', req.body);
+
       const { name, address, is_main } = req.body;
 
       const location = await locationService.createLocation(

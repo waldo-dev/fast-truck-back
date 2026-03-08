@@ -35,6 +35,8 @@ export enum OrderType {
 export enum PaymentMethod {
   CASH = 'CASH',
   CARD = 'CARD',
+  DEBIT_CARD = 'DEBIT_CARD',
+  CREDIT_CARD = 'CREDIT_CARD',
   TRANSFER = 'TRANSFER',
   WEBPAY = 'WEBPAY',
 }
@@ -43,6 +45,13 @@ export enum PaymentStatus {
   PENDING = 'PENDING',
   PAID = 'PAID',
   FAILED = 'FAILED',
+}
+
+export enum SubscriptionStatus {
+  TRIAL = 'TRIAL',
+  ACTIVE = 'ACTIVE',
+  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
 }
 
 export enum ProductStatus {

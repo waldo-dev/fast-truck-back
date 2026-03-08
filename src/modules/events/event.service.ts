@@ -54,7 +54,7 @@ export class EventService {
     // Si no viene location_id pero sí una dirección, crear un Location y usar su id
     let locationIdToUse = data.location_id ?? null;
     if (!locationIdToUse && data.address) {
-      const locationName = `${data.name || 'Event'} - ${data.address}`;
+      const locationName = data.location_name || `${data.name || 'Event'} - ${data.address}`;
       const location = await Location.create({
         business_id: businessId,
         name: locationName,

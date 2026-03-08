@@ -24,6 +24,9 @@ import { EventOrganizer } from './EventOrganizer';
 import { User } from './User';
 import { Otp } from './Otp';
 import { PaymentConfig } from './PaymentConfig';
+import { Plan } from './Plan';
+import { Subscription } from './Subscription';
+import { SubscriptionPayment } from './SubscriptionPayment';
 import { UserBusiness } from './UserBusiness';
 import { BusinessOperatingContext } from './BusinessOperatingContext';
 import { initializeAssociations } from './associations';
@@ -46,6 +49,9 @@ export {
   Otp,
   Payment,
   PaymentConfig,
+  Plan,
+  Subscription,
+  SubscriptionPayment,
   Product,
   ProductOption,
   ProductOptionRecipe,

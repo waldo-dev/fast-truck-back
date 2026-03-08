@@ -11,6 +11,9 @@ import { Order } from './Order';
 import { OrderItem } from './OrderItem';
 import { Payment } from './Payment';
 import { PaymentConfig } from './PaymentConfig';
+import { Plan } from './Plan';
+import { Subscription } from './Subscription';
+import { SubscriptionPayment } from './SubscriptionPayment';
 import { Product } from './Product';
 import { ProductOption } from './ProductOption';
 import { ProductOptionRecipe } from './ProductOptionRecipe';
@@ -41,6 +44,7 @@ export const initializeAssociations = (): void => {
   Business.hasMany(Order, { foreignKey: 'business_id', as: 'orders' });
   Business.hasMany(InventoryMovement, { foreignKey: 'business_id', as: 'inventoryMovements' });
   Business.hasMany(PaymentConfig, { foreignKey: 'business_id', as: 'paymentConfigs' });
+  Business.hasMany(Subscription, { foreignKey: 'business_id', as: 'subscriptions' });
   Business.hasOne(BusinessOperatingContext, { foreignKey: 'business_id', as: 'operatingContext' });
 
   // Category relations
@@ -101,6 +105,17 @@ export const initializeAssociations = (): void => {
 
   // Payment relations
   Payment.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+
+  // Plan relations
+  Plan.hasMany(Subscription, { foreignKey: 'plan_id', as: 'subscriptions' });
+
+  // Subscription relations
+  Subscription.belongsTo(Plan, { foreignKey: 'plan_id', as: 'plan' });
+  Subscription.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
+  Subscription.hasMany(SubscriptionPayment, { foreignKey: 'subscription_id', as: 'payments' });
+
+  // SubscriptionPayment relations
+  SubscriptionPayment.belongsTo(Subscription, { foreignKey: 'subscription_id', as: 'subscription' });
 
   // Product relations
   Product.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });

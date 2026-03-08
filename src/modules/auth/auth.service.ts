@@ -3,6 +3,8 @@ import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { AppError } from '../../shared/errors';
 import { authRepository } from './auth.repository';
+import { Business, Subscription, Plan } from '../../shared/database/models';
+import { Op } from 'sequelize';
 
 interface LoginCredentials {
   email: string;
@@ -75,6 +77,35 @@ export class AuthService {
   public async getCurrentUser(userId: number) {
     const user = await authRepository.findById(userId);
 
+    let business: any = null;
+    let subscription: any = null;
+
+    if (user.business_id) {
+      // Buscar negocio
+      business = await Business.findByPk(user.business_id, {
+        attributes: ['id', 'name', 'brand_name', 'logo_url'],
+      });
+
+      // Última suscripción (más reciente por created_at)
+      const sub = await Subscription.findOne({
+        where: { business_id: user.business_id },
+        include: [{ model: Plan, as: 'plan', attributes: ['id', 'name'] }],
+        order: [['created_at', 'DESC']],
+      });
+
+      if (sub) {
+        subscription = {
+          id: sub.id,
+          status: sub.status,
+          plan: sub.get('plan'),
+          trial_ends_at: sub.trial_ends_at,
+          current_period_start: sub.current_period_start,
+          current_period_end: sub.current_period_end,
+          cancel_at_period_end: sub.cancel_at_period_end,
+        };
+      }
+    }
+
     return {
       id: user.id,
       email: user.email,
@@ -83,6 +114,8 @@ export class AuthService {
       business_id: user.business_id,
       active: user.active,
       created_at: user.created_at,
+      business,
+      subscription,
     };
   }
 }

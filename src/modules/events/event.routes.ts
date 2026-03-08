@@ -1,5 +1,13 @@
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate, validateParams } from '../../shared/middlewares';
+import {
+  authenticate,
+  authorize,
+  injectBusinessId,
+  validate,
+  validateParams,
+  demoReadOnlyGuard,
+  subscriptionGuard,
+} from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { eventController } from './event.controller';
 import { createEventSchema, eventParamsSchema } from './event.schemas';
@@ -21,6 +29,8 @@ router.get('/:id', validateParams(eventParamsSchema), eventController.getById);
 router.post(
   '/',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
+  demoReadOnlyGuard,
+  subscriptionGuard('events'),
   validate(createEventSchema),
   eventController.create
 );

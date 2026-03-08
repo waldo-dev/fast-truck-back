@@ -51,6 +51,19 @@ export const createOrderSchema = z
   )
   .refine(
     (data) => {
+      // Si es un pedido de EVENT, debe venir event_id
+      if (data.order_source === OrderSource.EVENT) {
+        return !!data.event_id;
+      }
+      return true;
+    },
+    {
+      message: 'event_id is required for EVENT orders',
+      path: ['event_id'],
+    }
+  )
+  .refine(
+    (data) => {
       // Si es DELIVERY, debe tener address_id o customer.address
       if (data.order_type === OrderType.DELIVERY) {
         return !!data.address_id || !!data.customer?.address;
@@ -88,6 +101,11 @@ export const orderHistoryQuerySchema = z.object({
   customer_id: z
     .string()
     .regex(/^\d+$/, 'customer_id must be a number')
+    .transform(Number)
+    .optional(),
+  event_id: z
+    .string()
+    .regex(/^\d+$/, 'event_id must be a number')
     .transform(Number)
     .optional(),
   business_id: z

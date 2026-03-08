@@ -160,7 +160,9 @@ export class BusinessController {
         return;
       }
 
-      const { name, brand_name, primary_color, secondary_color } = req.body;
+      console.log('POST /business payload:', req.body);
+
+      const { name, brand_name, primary_color, secondary_color, plan_id, billing_period } = req.body;
       const file = req.file;
       if (!file) {
         res.status(400).json({
@@ -188,6 +190,16 @@ export class BusinessController {
           logo_url: null,
           primary_color: primary_color || null,
           secondary_color: secondary_color || null,
+          plan_id: plan_id ? Number(plan_id) : undefined,
+          // Normalizar el periodo de facturación a minúsculas
+          billing_period:
+            typeof billing_period === 'string'
+              ? billing_period.toLowerCase() === 'yearly'
+                ? 'yearly'
+                : billing_period.toLowerCase() === 'monthly'
+                  ? 'monthly'
+                  : undefined
+              : undefined,
         },
         req.user.role as UserRole,
         req.user.id

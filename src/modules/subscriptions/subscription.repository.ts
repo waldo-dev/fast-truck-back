@@ -1,4 +1,3 @@
-import { Op } from 'sequelize';
 import { Subscription, SubscriptionPayment, Plan, Business } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 import { SubscriptionStatus, PaymentStatus } from '../../shared/database/models/enums';

@@ -63,6 +63,7 @@ export class BusinessRepository {
     logo_url?: string | null;
     primary_color?: string | null;
     secondary_color?: string | null;
+    created_by_user_id?: number | null;
   }) {
     const business = await Business.create(data);
     return business;

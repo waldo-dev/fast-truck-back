@@ -4,7 +4,6 @@ import { env } from '../../config/env';
 import { AppError } from '../../shared/errors';
 import { authRepository } from './auth.repository';
 import { Business, Subscription, Plan } from '../../shared/database/models';
-import { Op } from 'sequelize';
 
 interface LoginCredentials {
   email: string;

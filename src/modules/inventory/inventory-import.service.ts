@@ -21,8 +21,12 @@ type ImportRow = {
 export class InventoryImportService {
   public async importRecipes(businessId: number, fileBuffer: Buffer | ArrayBuffer | Uint8Array) {
     const workbook = new ExcelJS.Workbook();
-    const buf = Buffer.isBuffer(fileBuffer) ? fileBuffer : Buffer.from(fileBuffer as any);
-    await workbook.xlsx.load(buf);
+    const arrayBuf: ArrayBuffer = Buffer.isBuffer(fileBuffer)
+      ? fileBuffer.buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength)
+      : fileBuffer instanceof Uint8Array
+      ? fileBuffer.buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength)
+      : (fileBuffer as ArrayBuffer);
+    await workbook.xlsx.load(arrayBuf);
 
     const sheet = workbook.worksheets[0];
     if (!sheet) {

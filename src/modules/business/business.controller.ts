@@ -120,7 +120,7 @@ export class BusinessController {
         return;
       }
 
-      const business = await businessService.getBusinessById(id, req.business_id);
+      const business = await businessService.getBusinessById(id);
 
       res.status(200).json({
         success: true,

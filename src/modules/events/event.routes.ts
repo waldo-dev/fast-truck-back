@@ -4,7 +4,6 @@ import {
   authorize,
   injectBusinessId,
   validate,
-  validateParams,
   demoReadOnlyGuard,
   subscriptionGuard,
 } from '../../shared/middlewares';

@@ -8,20 +8,28 @@ interface InventoryMovementAttributes {
   business_id: number | null;
   order_id: number | null;
   event_id: number | null;
+  location_id: number | null;
   movement_type: InventoryMovementType;
   quantity: number;
   reason: string | null;
   created_at: Date;
 }
 
-interface InventoryMovementCreationAttributes extends Optional<InventoryMovementAttributes, 'id' | 'inventory_item_id' | 'business_id' | 'order_id' | 'event_id' | 'reason' | 'created_at'> {}
+interface InventoryMovementCreationAttributes
+  extends Optional<
+    InventoryMovementAttributes,
+    'id' | 'inventory_item_id' | 'business_id' | 'order_id' | 'event_id' | 'location_id' | 'reason' | 'created_at'
+  > {}
 
-export class InventoryMovement extends Model<InventoryMovementAttributes, InventoryMovementCreationAttributes> implements InventoryMovementAttributes {
+export class InventoryMovement extends Model<InventoryMovementAttributes, InventoryMovementCreationAttributes>
+  implements InventoryMovementAttributes
+{
   public id!: number;
   public inventory_item_id!: number | null;
   public business_id!: number | null;
   public order_id!: number | null;
   public event_id!: number | null;
+  public location_id!: number | null;
   public movement_type!: InventoryMovementType;
   public quantity!: number;
   public reason!: string | null;
@@ -64,6 +72,14 @@ InventoryMovement.init(
       allowNull: true,
       references: {
         model: 'events',
+        key: 'id',
+      },
+    },
+    location_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'locations',
         key: 'id',
       },
     },

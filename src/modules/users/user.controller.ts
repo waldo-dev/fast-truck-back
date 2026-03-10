@@ -298,7 +298,6 @@ export class UserController {
       }
 
       const id = parseInt(req.params.id, 10);
-      console.log("🚀 ~ UserController ~ id:", id)
 
       if (isNaN(id)) {
         res.status(400).json({

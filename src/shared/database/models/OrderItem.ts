@@ -7,10 +7,12 @@ interface OrderItemAttributes {
   product_id: number | null;
   quantity: number;
   unit_price: number;
+  cost: number | null;
   notes: string | null;
 }
 
-interface OrderItemCreationAttributes extends Optional<OrderItemAttributes, 'id' | 'order_id' | 'product_id' | 'notes'> {}
+interface OrderItemCreationAttributes
+  extends Optional<OrderItemAttributes, 'id' | 'order_id' | 'product_id' | 'notes' | 'cost'> {}
 
 export class OrderItem extends Model<OrderItemAttributes, OrderItemCreationAttributes> implements OrderItemAttributes {
   public id!: number;
@@ -18,6 +20,7 @@ export class OrderItem extends Model<OrderItemAttributes, OrderItemCreationAttri
   public product_id!: number | null;
   public quantity!: number;
   public unit_price!: number;
+  public cost!: number | null;
   public notes!: string | null;
 }
 
@@ -52,6 +55,10 @@ OrderItem.init(
     unit_price: {
       type: DataTypes.INTEGER,
       allowNull: false,
+    },
+    cost: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
     },
     notes: {
       type: DataTypes.TEXT,

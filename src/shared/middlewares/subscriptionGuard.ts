@@ -5,7 +5,7 @@ import { SubscriptionStatus } from '../database/models/enums';
 
 const DEMO_BUSINESS_ID = 999;
 
-type GuardedResource = 'events' | 'products' | 'users' | 'locations';
+type GuardedResource = 'events' | 'products' | 'users' | 'locations' | 'inventory';
 
 const getLimitField = (plan: Plan, resource: GuardedResource): number | null | undefined => {
   switch (resource) {
@@ -17,6 +17,9 @@ const getLimitField = (plan: Plan, resource: GuardedResource): number | null | u
       return (plan as any).max_users;
     case 'locations':
       return (plan as any).max_locations;
+    case 'inventory':
+      // sin límite de plan para inventario
+      return undefined;
     default:
       return undefined;
   }
@@ -32,6 +35,8 @@ const getCountForResource = async (businessId: number, resource: GuardedResource
       return User.count({ where: { business_id: businessId } });
     case 'locations':
       return Location.count({ where: { business_id: businessId } });
+    case 'inventory':
+      return 0;
   }
 };
 

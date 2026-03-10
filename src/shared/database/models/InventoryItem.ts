@@ -9,19 +9,27 @@ interface InventoryItemAttributes {
   unit: InventoryUnit;
   current_stock: number;
   min_stock: number;
+  cost_per_item: number | null;
   active: boolean;
   created_at: Date;
 }
 
-interface InventoryItemCreationAttributes extends Optional<InventoryItemAttributes, 'id' | 'business_id' | 'current_stock' | 'min_stock' | 'active' | 'created_at'> {}
+interface InventoryItemCreationAttributes
+  extends Optional<
+    InventoryItemAttributes,
+    'id' | 'business_id' | 'current_stock' | 'min_stock' | 'cost_per_item' | 'active' | 'created_at'
+  > {}
 
-export class InventoryItem extends Model<InventoryItemAttributes, InventoryItemCreationAttributes> implements InventoryItemAttributes {
+export class InventoryItem extends Model<InventoryItemAttributes, InventoryItemCreationAttributes>
+  implements InventoryItemAttributes
+{
   public id!: number;
   public business_id!: number | null;
   public name!: string;
   public unit!: InventoryUnit;
   public current_stock!: number;
   public min_stock!: number;
+  public cost_per_item!: number | null;
   public active!: boolean;
   public created_at!: Date;
 }
@@ -55,6 +63,12 @@ InventoryItem.init(
       defaultValue: 0,
     },
     min_stock: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: 0,
+    },
+    cost_per_item: {
+      field: 'cost_per_items',
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
       defaultValue: 0,

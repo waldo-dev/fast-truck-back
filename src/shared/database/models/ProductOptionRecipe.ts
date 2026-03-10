@@ -1,5 +1,6 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../connection';
+import { InventoryItem } from './InventoryItem';
 
 interface ProductOptionRecipeAttributes {
   id: number;
@@ -52,5 +53,7 @@ ProductOptionRecipe.init(
     timestamps: false,
   }
 );
+
+// Associations set in associations.ts
 
 

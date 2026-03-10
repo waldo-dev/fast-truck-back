@@ -22,7 +22,6 @@ export class EventRepository {
     // Si se solicita solo eventos futuros
     if (filters?.future_only) {
       const todayStr = new Date().toISOString().slice(0, 10);
-      console.log("🚀 ~ EventRepository ~ findAll ~ todayStr:", todayStr)
       where.event_date = { [Op.gte]: todayStr };
     }
 

@@ -20,8 +20,6 @@ export class BusinessService {
   }
 
   public async getBusinessById(id: number, businessId: number) {
-    console.log("🚀 ~ BusinessService ~ getBusinessById ~ businessId:", businessId)
-    console.log("🚀 ~ BusinessService ~ getBusinessById ~ id:", id)
     const business = await businessRepository.findById(id);
     return business;
   }

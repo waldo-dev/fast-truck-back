@@ -19,7 +19,6 @@ export class UserRepository {
   }
 
   public async findById(id: number, businessId?: number) {
-    console.log("🚀 ~ UserRepository ~ findById ~ businessId:", businessId)
     const user = await User.findOne({
       where: {
         id,

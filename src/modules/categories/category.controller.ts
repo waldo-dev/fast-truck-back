@@ -23,7 +23,6 @@ export class CategoryController {
         req.user.role as UserRole,
         businessId && !isNaN(businessId) ? businessId : undefined
       );
-      console.log("🚀 ~ CategoryController ~ categories:", categories)
 
       res.status(200).json({
         success: true,

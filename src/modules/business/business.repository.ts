@@ -42,10 +42,8 @@ export class BusinessRepository {
       where: { user_id: userId },
       attributes: ['business_id'],
     });
-    console.log("🚀 ~ BusinessRepository ~ findByUser ~ links:", links)
 
     const businessIds = Array.from(new Set(links.map((l) => l.business_id).filter(Boolean)));
-    console.log("🚀 ~ BusinessRepository ~ findByUser ~ businessIds:", businessIds)
 
     if (businessIds.length === 0) {
       return [];

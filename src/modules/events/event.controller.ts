@@ -168,7 +168,6 @@ export class EventController {
 
   public getAnalytics = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      console.log("🚀 ~ EventController ~ req:", req)
       if (!req.business_id) {
         res.status(403).json({
           success: false,

@@ -19,6 +19,7 @@ import mailingRoutes from './modules/mailing/mailing.routes';
 import publicRoutes from './modules/public/public.routes';
 import planRoutes from './modules/plans/plan.routes';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
+import inventoryRoutes from './modules/inventory/inventory.routes';
 
 const createApp = (): Application => {
   const app = express();
@@ -63,6 +64,7 @@ const createApp = (): Application => {
   app.use('/locations', locationRoutes);
   app.use('/events', eventRoutes);
   app.use('/orders', orderRoutes);
+  app.use('/', inventoryRoutes);
   app.use('/payments', paymentRoutes);
   app.use('/payment-configs', paymentConfigRoutes);
   app.use('/mailing', mailingRoutes);

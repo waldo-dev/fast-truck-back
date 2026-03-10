@@ -88,6 +88,34 @@ export class EventService {
 
     return event;
   }
+
+  public async getSummary(eventId: number, businessId: number) {
+    return eventRepository.getSummary(eventId, businessId);
+  }
+
+  public async getAnalytics(businessId: number, limit?: number) {
+    return eventRepository.getAnalytics(businessId, limit);
+  }
+
+  public async addExpense(
+    eventId: number,
+    businessId: number,
+    data: { type?: string | null; description?: string | null; amount: number }
+  ) {
+    return eventRepository.addExpense({
+      event_id: eventId,
+      business_id: businessId,
+      ...data,
+    });
+  }
+
+  public async listExpenses(eventId: number, businessId: number) {
+    return eventRepository.listExpenses(eventId, businessId);
+  }
+
+  public async deleteExpense(eventId: number, expenseId: number, businessId: number) {
+    return eventRepository.deleteExpense(eventId, expenseId, businessId);
+  }
 }
 
 export const eventService = new EventService();

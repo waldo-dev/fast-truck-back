@@ -135,6 +135,140 @@ export class EventController {
       next(error);
     }
   };
+
+  public getSummary = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.business_id) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'Business ID is required' },
+        });
+        return;
+      }
+
+      const id = req.user?.id
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'Invalid event ID' },
+        });
+        return;
+      }
+
+      const summary = await eventService.getSummary(id, req.business_id);
+
+      res.status(200).json({
+        success: true,
+        data: summary,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getAnalytics = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      console.log("🚀 ~ EventController ~ req:", req)
+      if (!req.business_id) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'Business ID is required' },
+        });
+        return;
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const analytics = await eventService.getAnalytics(req.business_id, limit);
+
+      res.status(200).json({
+        success: true,
+        data: analytics,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public createExpense = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.business_id) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'Business ID is required' },
+        });
+        return;
+      }
+
+      const eventId = parseInt(req.params.id, 10);
+      const { type, description, amount } = req.body;
+
+      const expense = await eventService.addExpense(eventId, req.business_id, { type, description, amount });
+
+      res.status(201).json({
+        success: true,
+        data: expense,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public listExpenses = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.business_id) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'Business ID is required' },
+        });
+        return;
+      }
+
+      const eventId = req.user?.id
+      if (!eventId) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'Event ID is required' },
+        });
+        return;
+      }
+      const expenses = await eventService.listExpenses(eventId, req.business_id);
+      if (!expenses) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'Expenses not found' },
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: expenses,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public deleteExpense = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.business_id) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'Business ID is required' },
+        });
+        return;
+      }
+
+      const eventId = parseInt(req.params.id, 10);
+      const expenseId = parseInt(req.params.expenseId, 10);
+
+      await eventService.deleteExpense(eventId, expenseId, req.business_id);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const eventController = new EventController();

@@ -42,4 +42,15 @@ export const eventParamsSchema = z.object({
   id: z.string().regex(/^\d+$/, 'ID must be a number').transform(Number),
 });
 
+export const createExpenseSchema = z.object({
+  type: z.string().max(50).optional().nullable(),
+  description: z.string().max(5000).optional().nullable(),
+  amount: z.number().positive('Amount must be greater than 0'),
+});
+
+export const expenseParamsSchema = z.object({
+  id: z.string().regex(/^\d+$/, 'ID must be a number').transform(Number),
+  expenseId: z.string().regex(/^\d+$/, 'Expense ID must be a number').transform(Number),
+});
+
 

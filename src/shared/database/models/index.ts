@@ -21,6 +21,7 @@ import { ProductBusiness } from './ProductBusiness';
 import { PromotionBusiness } from './PromotionBusiness';
 import { EventProduct } from './EventProduct';
 import { EventOrganizer } from './EventOrganizer';
+import { EventExpense } from './EventExpense';
 import { User } from './User';
 import { Otp } from './Otp';
 import { PaymentConfig } from './PaymentConfig';
@@ -62,6 +63,7 @@ export {
   ProductBusiness,
   EventProduct,
   EventOrganizer,
+  EventExpense,
   User,
   UserBusiness,
   BusinessOperatingContext,

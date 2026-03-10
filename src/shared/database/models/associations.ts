@@ -26,6 +26,7 @@ import { UserBusiness } from './UserBusiness';
 import { ProductBusiness } from './ProductBusiness';
 import { EventProduct } from './EventProduct';
 import { EventOrganizer } from './EventOrganizer';
+import { EventExpense } from './EventExpense';
 import { BusinessOperatingContext } from './BusinessOperatingContext';
 
 let associationsInitialized = false;
@@ -66,6 +67,7 @@ export const initializeAssociations = (): void => {
   Event.hasMany(InventoryLocation, { foreignKey: 'event_id', as: 'inventoryLocations' });
   Event.hasMany(InventoryMovement, { foreignKey: 'event_id', as: 'inventoryMovements' });
   Event.hasMany(Order, { foreignKey: 'event_id', as: 'orders' });
+  Event.hasMany(EventExpense, { foreignKey: 'event_id', as: 'expenses' });
 
   // InventoryItem relations
   InventoryItem.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
@@ -168,6 +170,9 @@ export const initializeAssociations = (): void => {
   // Event-Organizer relations
   Event.hasMany(EventOrganizer, { foreignKey: 'event_id', as: 'organizers' });
   EventOrganizer.belongsTo(Event, { foreignKey: 'event_id', as: 'event' });
+
+  // EventExpense relations
+  EventExpense.belongsTo(Event, { foreignKey: 'event_id', as: 'event' });
 
   // User relations
   User.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });

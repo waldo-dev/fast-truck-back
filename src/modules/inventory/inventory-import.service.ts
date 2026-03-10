@@ -4,7 +4,7 @@ import { inventoryImportRepository } from './inventory-import.repository';
 export class InventoryImportService {
   public async importRecipes(businessId: number, fileBuffer: Buffer) {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(fileBuffer);
+    await workbook.xlsx.load(Buffer.from(fileBuffer));
 
     const sheet = workbook.worksheets[0];
     if (!sheet) {
@@ -72,17 +72,17 @@ export class InventoryImportService {
       rowsData.push({
         product_id: productId || undefined,
         product_name: product_name || undefined,
-        product_price: product_price || undefined,
+        product_price: product_price ?? undefined,
         category_name: category_name || undefined,
         option_id: optionId || undefined,
         option_value: option_value || undefined,
-        option_extra_price: option_extra_price || undefined,
+        option_extra_price: option_extra_price ?? undefined,
         option_type: option_type || undefined,
         inventory_item_id: invId || undefined,
         inventory_item_name: inventory_item_name || undefined,
         inventory_unit: inventory_unit || undefined,
-        cost_per_item: cost_per_item || undefined,
-        min_stock: min_stock || undefined,
+        cost_per_item: cost_per_item ?? undefined,
+        min_stock: min_stock ?? undefined,
         quantity_required: qty,
       });
     });

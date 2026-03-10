@@ -18,7 +18,7 @@ export class UserRepository {
     return users;
   }
 
-  public async findById(id: number, businessId?: number) {
+  public async findById(id: number, _businessId?: number) {
     const user = await User.findOne({
       where: {
         id,

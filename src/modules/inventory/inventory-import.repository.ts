@@ -7,7 +7,6 @@ import {
   InventoryItem,
   Category,
 } from '../../shared/database/models';
-import { AppError } from '../../shared/errors';
 import { sequelize } from '../../shared/database/connection';
 import { InventoryUnit } from '../../shared/database/models/enums';
 

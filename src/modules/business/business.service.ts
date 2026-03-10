@@ -19,7 +19,7 @@ export class BusinessService {
     return businessRepository.findByUser(userId);
   }
 
-  public async getBusinessById(id: number, businessId: number) {
+  public async getBusinessById(id: number) {
     const business = await businessRepository.findById(id);
     return business;
   }

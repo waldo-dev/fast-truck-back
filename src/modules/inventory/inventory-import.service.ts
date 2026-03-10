@@ -1,10 +1,28 @@
 import ExcelJS from 'exceljs';
 import { inventoryImportRepository } from './inventory-import.repository';
 
+type ImportRow = {
+  product_id?: number;
+  product_name?: string;
+  product_price?: number;
+  category_name?: string;
+  option_id?: number | null;
+  option_value?: string | null;
+  option_extra_price?: number | null;
+  option_type?: string | null;
+  inventory_item_id?: number;
+  inventory_item_name?: string;
+  inventory_unit?: string;
+  cost_per_item?: number | null;
+  min_stock?: number | null;
+  quantity_required: number;
+};
+
 export class InventoryImportService {
-  public async importRecipes(businessId: number, fileBuffer: Buffer) {
+  public async importRecipes(businessId: number, fileBuffer: Buffer | ArrayBuffer | Uint8Array) {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(Buffer.from(fileBuffer));
+    const buf = Buffer.isBuffer(fileBuffer) ? fileBuffer : Buffer.from(fileBuffer as any);
+    await workbook.xlsx.load(buf);
 
     const sheet = workbook.worksheets[0];
     if (!sheet) {
@@ -32,12 +50,7 @@ export class InventoryImportService {
     if (!headerMap['inventory_item_id'] && !headerMap['inventory_item_name'])
       throw new Error('Missing inventory_item_id or inventory_item_name');
 
-    const rowsData: Array<{
-      product_id: number;
-      option_id?: number | null;
-      inventory_item_id: number;
-      quantity_required: number;
-    }> = [];
+    const rowsData: ImportRow[] = [];
 
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;

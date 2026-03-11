@@ -9,6 +9,8 @@ export class OrderService {
     businessId: number,
     filters?: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number; event_id?: number }
   ) {
+    console.log("🚀 ~ OrderService ~ getAllOrders ~ businessId:", businessId)
+    console.log("🚀 ~ OrderService ~ getAllOrders ~ filters:", filters)
     const orders = await orderRepository.findAll(businessId, filters);
     return orders;
   }
@@ -173,6 +175,7 @@ export class OrderService {
       startDate?: Date;
       endDate?: Date;
       vatRate?: number;
+      event_id?: number;
     }
   ) {
     return orderRepository.findCloseout(businessId, filters);

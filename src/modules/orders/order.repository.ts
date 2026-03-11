@@ -433,6 +433,7 @@ export class OrderRepository {
       startDate?: Date;
       endDate?: Date;
       vatRate?: number;
+      event_id?: number;
     }
   ) {
     const where: any = {
@@ -447,6 +448,10 @@ export class OrderRepository {
       if (filters.endDate) {
         where.created_at[Op.lte] = filters.endDate;
       }
+    }
+
+    if (filters.event_id) {
+      where.event_id = filters.event_id;
     }
 
     const orders = await Order.findAll({

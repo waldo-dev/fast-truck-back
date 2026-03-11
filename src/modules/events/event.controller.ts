@@ -6,7 +6,8 @@ import { eventService } from './event.service';
 export class EventController {
   public getAll = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id) {
+      const businessIdParam = req.query.business_id ? Number(req.query.business_id) : req.business_id;
+      if (!businessIdParam || Number.isNaN(businessIdParam)) {
         res.status(403).json({
           success: false,
           error: {
@@ -19,7 +20,7 @@ export class EventController {
       const futureOnly = req.query.future === 'true';
       const isActive = typeof req.query.is_active === 'string' ? req.query.is_active === 'true' : undefined;
 
-      const events = await eventService.getAllEvents(req.business_id, futureOnly, isActive);
+      const events = await eventService.getAllEvents(businessIdParam, futureOnly, isActive);
 
       res.status(200).json({
         success: true,
@@ -67,7 +68,7 @@ export class EventController {
 
   public create = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id || !req.user) {
+      if (!req.user) {
         res.status(403).json({
           success: false,
           error: {
@@ -78,6 +79,7 @@ export class EventController {
       }
 
       const {
+        business_id,
         location_id,
         name,
         description,
@@ -99,6 +101,15 @@ export class EventController {
         address,
         location_name,
       } = req.body;
+
+      const businessIdNum = business_id ? Number(business_id) : req.business_id;
+      if (!businessIdNum || Number.isNaN(businessIdNum)) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'business_id is required' },
+        });
+        return;
+      }
 
       const event = await eventService.createEvent(
         {
@@ -123,7 +134,7 @@ export class EventController {
           address,
           location_name,
         },
-        req.business_id,
+        businessIdNum,
         req.user.role as UserRole
       );
 

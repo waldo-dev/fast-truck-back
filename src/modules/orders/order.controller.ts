@@ -151,7 +151,7 @@ export class OrderController {
 
   public getHistory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id || !req.user) {
+      if (!req.user) {
         res.status(403).json({
           success: false,
           error: {
@@ -282,11 +282,22 @@ export class OrderController {
         return;
       }
 
-      const { start_date, end_date, vat_rate } = req.query as {
+      const { start_date, end_date, vat_rate, business_id, event_id } = req.query as {
         start_date?: string;
         end_date?: string;
         vat_rate?: string | number;
+        business_id?: string;
+        event_id?: string;
       };
+
+      const businessIdNum = business_id ? parseInt(business_id, 10) : req.business_id;
+      if (!businessIdNum || Number.isNaN(businessIdNum)) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'business_id is required' },
+        });
+        return;
+      }
 
       const parseBoundary = (value?: string, isStart?: boolean): Date | undefined => {
         if (!value) return undefined;
@@ -306,6 +317,7 @@ export class OrderController {
         startDate?: Date;
         endDate?: Date;
         vatRate?: number;
+        event_id?: number;
       } = {};
 
       const parsedStart = parseBoundary(start_date, true);
@@ -323,8 +335,14 @@ export class OrderController {
           filters.vatRate = rate;
         }
       }
+      if (event_id) {
+        const parsedEventId = parseInt(event_id, 10);
+        if (!isNaN(parsedEventId)) {
+          filters.event_id = parsedEventId;
+        }
+      }
 
-      const summary = await orderService.getCloseout(req.business_id, filters);
+      const summary = await orderService.getCloseout(businessIdNum, filters);
 
       res.status(200).json({
         success: true,

@@ -52,7 +52,6 @@ router.post(
   '/',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
   demoReadOnlyGuard,
-  subscriptionGuard('events'),
   validate(createEventSchema),
   eventController.create
 );

@@ -45,7 +45,6 @@ export class OrderService {
         notes?: string | null;
       }>;
     },
-    userRole: UserRole
   ) {
     // Si el origen es EVENT, el event_id es obligatorio
     if (data.order_source === OrderSource.EVENT && !data.event_id) {
@@ -132,7 +131,6 @@ export class OrderService {
 
   public async updateOrderStatus(
     id: number,
-    businessId: number,
     status: OrderStatus,
     userRole: UserRole
   ) {
@@ -146,7 +144,7 @@ export class OrderService {
     return order;
   }
 
-  public async deleteOrder(id: number, businessId: number, userRole: UserRole) {
+  public async deleteOrder(id: number, userRole: UserRole) {
     // Solo ADMIN puede eliminar órdenes
     if (userRole !== UserRole.ADMIN) {
       throw new AppError('Only ADMIN can delete orders', 403);

@@ -462,7 +462,6 @@ export class OrderController {
           status,
           items,
         },
-        req.user.role as UserRole
       );
 
       res.status(201).json({
@@ -510,7 +509,7 @@ export class OrderController {
         return;
       }
 
-      const order = await orderService.updateOrderStatus(id, req.business_id, status, req.user.role as UserRole);
+      const order = await orderService.updateOrderStatus(id, status, req.user.role as UserRole);
 
       res.status(200).json({
         success: true,
@@ -545,7 +544,7 @@ export class OrderController {
         return;
       }
 
-      await orderService.deleteOrder(id, req.business_id, req.user.role as UserRole);
+      await orderService.deleteOrder(id, req.user.role as UserRole);
 
       res.status(200).json({
         success: true,

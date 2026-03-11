@@ -13,13 +13,14 @@ export class OrderService {
     return orders;
   }
 
-  public async getOrderById(id: number, businessId: number) {
-    const order = await orderRepository.findById(id, businessId);
+  public async getOrderById(id: number) {
+    const order = await orderRepository.findById(id,);
     return order;
   }
 
   public async createOrder(
     data: {
+      business_id: number;
       customer_id?: number;
       customer?: {
         name: string;
@@ -44,14 +45,8 @@ export class OrderService {
         notes?: string | null;
       }>;
     },
-    businessId: number,
     userRole: UserRole
   ) {
-    // Validar permisos: LOCAL_OPERATOR solo puede crear pedidos WHATSAPP
-    if (userRole === UserRole.LOCAL_OPERATOR && data.order_source !== OrderSource.WHATSAPP) {
-      throw new AppError('LOCAL_OPERATOR can only create WHATSAPP orders', 403);
-    }
-
     // Si el origen es EVENT, el event_id es obligatorio
     if (data.order_source === OrderSource.EVENT && !data.event_id) {
       throw new AppError('event_id is required for EVENT orders', 400);
@@ -65,17 +60,17 @@ export class OrderService {
 
     if (customerId) {
       // Valida pertenencia al negocio
-      await customerRepository.findById(customerId, businessId);
+      await customerRepository.findById(customerId, data.business_id);
     } else if (data.customer) {
       const phone = data.customer.phone?.trim() || null;
 
       if (phone) {
-        const existingCustomer = await customerRepository.findByPhone(phone, businessId);
+        const existingCustomer = await customerRepository.findByPhone(phone, data.business_id);
         if (existingCustomer) {
           customerId = existingCustomer.id;
         } else {
           const newCustomer = await customerRepository.create({
-            business_id: businessId,
+            business_id: data.business_id,
             name: data.customer.name,
             phone,
             notes: data.customer.notes || null,
@@ -86,7 +81,7 @@ export class OrderService {
         // Sin phone: crear un customer rápido con phone temporal
         const tempPhone = `NO_PHONE_${Date.now()}`;
         const newCustomer = await customerRepository.create({
-          business_id: businessId,
+          business_id: data.business_id,
           name: data.customer.name,
           phone: tempPhone,
           notes: data.customer.notes || null,
@@ -120,12 +115,12 @@ export class OrderService {
       await customerRepository.findAddressById(addressId, customerId);
     }
 
-      const order = await orderRepository.create({
-      business_id: businessId,
+    const order = await orderRepository.create({
+      business_id: data.business_id,
       customer_id: customerId,
       address_id: addressId,
       event_id: data.event_id,
-        payment_method: data.payment_method ?? null,
+      payment_method: data.payment_method ?? null,
       order_source: data.order_source,
       order_type: data.order_type,
       status: data.status,
@@ -147,7 +142,7 @@ export class OrderService {
       throw new AppError('Only ADMIN, BUSINESS_OWNER or LOCAL_OPERATOR can update order status', 403);
     }
 
-    const order = await orderRepository.updateStatus(id, businessId, status);
+    const order = await orderRepository.updateStatus(id, status);
     return order;
   }
 
@@ -157,7 +152,7 @@ export class OrderService {
       throw new AppError('Only ADMIN can delete orders', 403);
     }
 
-    await orderRepository.delete(id, businessId);
+    await orderRepository.delete(id);
   }
 
   public async getHistory(

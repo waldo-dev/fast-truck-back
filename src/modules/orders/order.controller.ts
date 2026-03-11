@@ -404,7 +404,7 @@ export class OrderController {
         return;
       }
 
-      const order = await orderService.getOrderById(id, req.business_id);
+      const order = await orderService.getOrderById(id);
 
       res.status(200).json({
         success: true,
@@ -417,7 +417,7 @@ export class OrderController {
 
   public create = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id || !req.user) {
+      if (!req.user) {
         res.status(403).json({
           success: false,
           error: {
@@ -427,10 +427,31 @@ export class OrderController {
         return;
       }
 
-      const { customer_id, customer, address_id, event_id, payment_method, order_source, order_type, status, items } = req.body;
+      const {
+        business_id,
+        customer_id,
+        customer,
+        address_id,
+        event_id,
+        payment_method,
+        order_source,
+        order_type,
+        status,
+        items,
+      } = req.body;
+
+      const businessIdNum = Number(business_id ?? req.business_id);
+      if (!businessIdNum || Number.isNaN(businessIdNum)) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'business_id is required' },
+        });
+        return;
+      }
 
       const order = await orderService.createOrder(
         {
+          business_id: businessIdNum,
           customer_id,
           customer,
           address_id,
@@ -441,7 +462,6 @@ export class OrderController {
           status,
           items,
         },
-        req.business_id,
         req.user.role as UserRole
       );
 

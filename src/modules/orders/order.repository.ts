@@ -522,11 +522,10 @@ export class OrderRepository {
     };
   }
 
-  public async findById(id: number, businessId: number) {
+  public async findById(id: number, transaction?: Transaction) {
     const order = await Order.findOne({
       where: {
         id,
-        business_id: businessId,
       },
       include: [
         {
@@ -556,6 +555,7 @@ export class OrderRepository {
           ],
         },
       ],
+      transaction,
     });
 
     if (!order) {
@@ -586,7 +586,6 @@ export class OrderRepository {
       const customer = await Customer.findOne({
         where: {
           id: data.customer_id,
-          business_id: data.business_id,
         },
         transaction: t,
         lock: t.LOCK.UPDATE,
@@ -618,7 +617,6 @@ export class OrderRepository {
         eventRecord = await Event.findOne({
           where: {
             id: data.event_id,
-            business_id: data.business_id,
           },
           transaction: t,
           lock: t.LOCK.UPDATE,
@@ -717,7 +715,7 @@ export class OrderRepository {
       if (data.payment_method) {
         await Payment.create(
           {
-            order_id: order.id,
+            order_id: order.dataValues.id,
             payment_method: data.payment_method,
             payment_status: PaymentStatus.PENDING,
             amount: total,
@@ -729,7 +727,7 @@ export class OrderRepository {
       // Crear items
       await OrderItem.bulkCreate(
         orderItems.map((item) => ({
-          order_id: order.id,
+          order_id: order.dataValues.id,
           ...item,
         })),
         { transaction: t }
@@ -796,7 +794,7 @@ export class OrderRepository {
           {
             inventory_item_id: invId,
             business_id: data.business_id,
-            order_id: order.id,
+            order_id: order.dataValues.id,
             event_id: data.event_id || null,
             location_id: (eventRecord as any)?.location_id || null,
             movement_type: InventoryMovementType.OUT,
@@ -807,12 +805,12 @@ export class OrderRepository {
         );
       }
 
-      return this.findById(order.id, data.business_id);
+      return this.findById(order.dataValues.id, t);
     });
   }
 
-  public async updateStatus(id: number, businessId: number, status: OrderStatus) {
-    const order = await this.findById(id, businessId);
+  public async updateStatus(id: number,status: OrderStatus) {
+    const order = await this.findById(id);
 
     // Validar transición de estado
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
@@ -838,8 +836,8 @@ export class OrderRepository {
     return order.reload();
   }
 
-  public async delete(id: number, businessId: number) {
-    const order = await this.findById(id, businessId);
+  public async delete(id: number) {
+    const order = await this.findById(id);
 
     // Solo se pueden eliminar órdenes en estado CREATED o CANCELLED
     if (order.status !== OrderStatus.CREATED && order.status !== OrderStatus.CANCELLED) {

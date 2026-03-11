@@ -4,6 +4,17 @@ import { AuthRequest } from '../../shared/middlewares';
 import { UserRole, ProductStatus } from '../../shared/database/models/enums';
 import { productService } from './product.service';
 
+// Utilidad para parsear JSON de forma segura en requests multipart/form-data
+const safeJsonParse = <T>(value: any, fallback: T): T => {
+  if (typeof value !== 'string') return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed as T;
+  } catch {
+    return fallback;
+  }
+};
+
 type FileAuthRequest = AuthRequest & { file?: Express.Multer.File };
 
 export class ProductController {
@@ -104,7 +115,7 @@ export class ProductController {
           if (item.product && item.product.id && item.business_id) {
             try {
               const imageUrl = await this.uploadImageToBucket(file, item.business_id, item.product.id);
-              item.product = await productService.updateProductImage(item.product.id, item.business_id, imageUrl);
+              item.product = await productService.updateProductImage(item.product.id, imageUrl);
             } catch (err) {
               item.error = `Image upload failed: ${(err as any)?.message || 'unknown error'}`;
             }
@@ -333,7 +344,7 @@ export class ProductController {
         return;
       }
 
-      const product = await productService.getProductById(id, req.business_id);
+      const product = await productService.getProductById(id);
 
       res.status(200).json({
         success: true,
@@ -346,7 +357,7 @@ export class ProductController {
 
   public create = async (req: FileAuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id || !req.user) {
+      if (!req.user) {
         res.status(403).json({
           success: false,
           error: {
@@ -358,7 +369,16 @@ export class ProductController {
 
       const file = req.file;
 
-      const { name, description, price, category_id, image_url, status, options } = req.body;
+      const { name, description, price, category_id, image_url, status, options, business_id } = req.body as {
+        name: string;
+        description?: string | null;
+        price: number;
+        category_id?: number | null;
+        image_url?: string | null;
+        status?: ProductStatus;
+        options?: any;
+        business_id: number;
+      };
 
       const product = await productService.createProduct(
         {
@@ -370,7 +390,7 @@ export class ProductController {
           status,
           options,
         },
-        req.business_id,
+        business_id,
         req.user.role as UserRole,
         req.user.id
       );
@@ -378,8 +398,8 @@ export class ProductController {
       let productWithImage = product;
 
       if (file) {
-        const imageUrl = await this.uploadImageToBucket(file, req.business_id, product.id);
-        productWithImage = await productService.updateProductImage(product.id, req.business_id, imageUrl);
+        const imageUrl = await this.uploadImageToBucket(file, business_id, product.id);
+        productWithImage = await productService.updateProductImage(product.id, imageUrl);
       }
 
       res.status(201).json({
@@ -393,7 +413,7 @@ export class ProductController {
 
   public update = async (req: FileAuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id || !req.user) {
+      if (!req.user) {
         res.status(403).json({
           success: false,
           error: {
@@ -417,19 +437,90 @@ export class ProductController {
 
       const file = req.file;
 
-      const { name, description, price, category_id, image_url, status, options } = req.body;
+      const body: any = req.body;
+
+      // Normalizar business_ids provenientes de multipart (arreglo, strings, keys indexadas)
+      const normalizeBusinessIds = (payload: any): number[] => {
+        let ids: any[] = [];
+        if (Array.isArray(payload.business_ids)) {
+          ids = payload.business_ids;
+        } else if (Array.isArray(payload['business_ids[]'])) {
+          ids = payload['business_ids[]'];
+        } else {
+          const indexed = Object.entries(payload)
+            .filter(([k]) => k.startsWith('business_ids['))
+            .map(([, v]) => v);
+          if (indexed.length > 0) {
+            ids = indexed;
+          } else if (typeof payload.business_ids === 'string') {
+            try {
+              const parsed = JSON.parse(payload.business_ids);
+              if (Array.isArray(parsed)) {
+                ids = parsed;
+              }
+            } catch (_) {
+              ids = payload.business_ids
+                .split(',')
+                .map((v: string) => v.trim())
+                .filter((v: string) => v !== '');
+            }
+          }
+        }
+        return ids
+          .map((v) => Number(v))
+          .filter((v) => !Number.isNaN(v));
+      };
+
+      const normalizedBusinessIds = normalizeBusinessIds(body);
+
+      const {
+        name,
+        description,
+        price,
+        category_id,
+        image_url,
+        status,
+        options,
+        sku,
+        business_id,
+      } = body as {
+        name?: string;
+        description?: string | null;
+        price?: number | string;
+        category_id?: number | string | null;
+        image_url?: string | null;
+        status?: ProductStatus;
+        options?: any;
+        business_id?: number | string;
+        sku?: string | null;
+      };
+
+      const targetBusinessId = business_id
+        ? Number(business_id)
+        : normalizedBusinessIds.length > 0
+          ? normalizedBusinessIds[0]
+          : undefined;
+
+      if (!targetBusinessId || Number.isNaN(targetBusinessId)) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'business_id is required' },
+        });
+        return;
+      }
 
       const product = await productService.updateProduct(
         id,
-        req.business_id,
         {
           name,
           description,
-          price,
-          category_id,
+          price: price !== undefined ? Number(price) : undefined,
+          category_id:
+            category_id !== undefined && category_id !== null ? Number(category_id) : undefined,
           image_url,
           status,
-          options,
+          options: typeof options === 'string' ? safeJsonParse(options, []) : options,
+          sku: sku !== undefined ? sku : undefined,
         },
         req.user.role as UserRole,
         req.user.id
@@ -438,8 +529,8 @@ export class ProductController {
       let productWithImage = product;
 
       if (file) {
-        const imageUrl = await this.uploadImageToBucket(file, req.business_id, id);
-        productWithImage = await productService.updateProductImage(id, req.business_id, imageUrl);
+        const imageUrl = await this.uploadImageToBucket(file, targetBusinessId, id);
+        productWithImage = await productService.updateProductImage(id,  imageUrl);
       }
 
       res.status(200).json({

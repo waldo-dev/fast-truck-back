@@ -121,7 +121,7 @@ export class CategoryController {
 
   public create = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id || !req.user) {
+      if (!req.user) {
         res.status(403).json({
           success: false,
           error: {
@@ -131,12 +131,13 @@ export class CategoryController {
         return;
       }
 
-      const { name } = req.body;
+      const { name, business_id } = req.body as { name: string; business_id: number };
 
       const category = await categoryService.createCategory(
         { name },
-        req.business_id,
-        req.user.role as UserRole
+        business_id,
+        req.user.role as UserRole,
+        req.user.id
       );
 
       res.status(201).json({

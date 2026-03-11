@@ -130,8 +130,8 @@ export class ProductService {
     return products;
   }
 
-  public async getProductById(id: number, businessId: number) {
-    const product = await productRepository.findById(id, businessId);
+  public async getProductById(id: number) {
+    const product = await productRepository.findById(id);
     return product;
   }
 
@@ -180,7 +180,6 @@ export class ProductService {
 
   public async updateProduct(
     id: number,
-    businessId: number,
     data: {
       name?: string;
       description?: string | null;
@@ -199,13 +198,11 @@ export class ProductService {
     userRole: UserRole,
     userId: number
   ) {
-    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
-      throw new AppError('Only ADMIN or BUSINESS_OWNER can update products', 403);
+    const current = await productRepository.findById(id);
+    if (!current.business_id) {
+      throw new AppError('Business ID is required for this product', 400);
     }
-
-    await this.ensureOwnerAccess(userRole, userId, businessId);
-
-    const current = await productRepository.findById(id, businessId);
+    await this.ensureOwnerAccess(userRole, userId, current.business_id);
 
     const normalizedStatus =
       data.status && typeof data.status === 'string'
@@ -213,6 +210,7 @@ export class ProductService {
         : data.status;
 
     let nextSku: string | undefined;
+    console.log("🚀 ~ ProductService ~ updateProduct ~ data:", data)
     if (data.sku === undefined || data.sku === null || data.sku.trim().length === 0) {
       // Si no viene SKU y el producto no tiene, generar uno nuevo
       if (!current.sku) {
@@ -222,7 +220,7 @@ export class ProductService {
       nextSku = data.sku.trim();
     }
 
-    const product = await productRepository.update(id, businessId, {
+    const product = await productRepository.update(id, {
       ...data,
       ...(normalizedStatus ? { status: normalizedStatus } : {}),
       ...(nextSku !== undefined ? { sku: nextSku } : {}),
@@ -230,10 +228,10 @@ export class ProductService {
     return product;
   }
 
-  public async updateProductImage(id: number, businessId: number, imageUrl: string) {
-    await productRepository.update(id, businessId, { image_url: imageUrl });
+  public async updateProductImage(id: number, imageUrl: string) {
+    await productRepository.update(id, { image_url: imageUrl });
     // Traerlo nuevamente con asociaciones y campos actualizados (incluido image_url)
-    const product = await productRepository.findById(id, businessId);
+    const product = await productRepository.findById(id);
     return product;
   }
 
@@ -341,7 +339,7 @@ export class ProductService {
 
     await this.ensureOwnerAccess(userRole, userId, businessId);
 
-    const product = await productRepository.toggleStatus(id, businessId, status);
+    const product = await productRepository.toggleStatus(id, status);
     return product;
   }
 
@@ -352,7 +350,7 @@ export class ProductService {
 
     await this.ensureOwnerAccess(userRole, userId, businessId);
 
-    await productRepository.delete(id, businessId);
+    await productRepository.delete(id);
   }
 }
 

@@ -74,12 +74,10 @@ export class ProductRepository {
     return products;
   }
 
-  public async findById(id: number, businessId: number) {
+  public async findById(id: number) {
     const product = await Product.findOne({
       where: {
         id,
-        business_id: businessId,
-        status: ProductStatus.ACTIVE,
       },
       include: [
         {
@@ -138,12 +136,11 @@ export class ProductRepository {
       );
     }
 
-    return this.findById(product.id, data.business_id);
+    return this.findById(product.id);
   }
 
   public async update(
     id: number,
-    businessId: number,
     data: {
       name?: string;
       description?: string | null;
@@ -160,7 +157,7 @@ export class ProductRepository {
       }>;
     }
   ) {
-    const product = await this.findById(id, businessId);
+    const product = await this.findById(id);
 
     const { options, ...productData } = data;
 
@@ -218,17 +215,17 @@ export class ProductRepository {
       }
     }
 
-    return this.findById(id, businessId);
+    return this.findById(id);
   }
 
-  public async toggleStatus(id: number, businessId: number, status: ProductStatus) {
-    const product = await this.findById(id, businessId);
+  public async toggleStatus(id: number, status: ProductStatus) {
+    const product = await this.findById(id);
     await product.update({ status });
     return product.reload();
   }
 
-  public async delete(id: number, businessId: number) {
-    const product = await this.findById(id, businessId);
+  public async delete(id: number) {
+    const product = await this.findById(id);
     await product.destroy();
   }
 }

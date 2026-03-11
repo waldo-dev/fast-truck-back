@@ -99,10 +99,20 @@ export class CategoryService {
     return category;
   }
 
-  public async createCategory(data: { name: string }, businessId: number, userRole: UserRole) {
+  public async createCategory(data: { name: string }, businessId: number, userRole: UserRole, userId: number) {
     // ADMIN y BUSINESS_OWNER pueden crear categorías
     if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
       throw new AppError('Only ADMIN or BUSINESS_OWNER can create categories', 403);
+    }
+
+    // Validar pertenencia si es owner
+    if (userRole === UserRole.BUSINESS_OWNER) {
+      const link = await UserBusiness.findOne({
+        where: { user_id: userId, business_id: businessId },
+      });
+      if (!link) {
+        throw new AppError('Business not associated to this owner', 403);
+      }
     }
 
     const category = await categoryRepository.create({

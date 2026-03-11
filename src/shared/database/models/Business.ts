@@ -8,10 +8,15 @@ interface BusinessAttributes {
   logo_url: string | null;
   primary_color: string | null;
   secondary_color: string | null;
+  is_active: boolean;
   created_at: Date;
 }
 
-interface BusinessCreationAttributes extends Optional<BusinessAttributes, 'id' | 'brand_name' | 'logo_url' | 'primary_color' | 'secondary_color' | 'created_at'> {}
+interface BusinessCreationAttributes
+  extends Optional<
+    BusinessAttributes,
+    'id' | 'brand_name' | 'logo_url' | 'primary_color' | 'secondary_color' | 'is_active' | 'created_at'
+  > {}
 
 export class Business extends Model<BusinessAttributes, BusinessCreationAttributes> implements BusinessAttributes {
   public id!: number;
@@ -20,6 +25,7 @@ export class Business extends Model<BusinessAttributes, BusinessCreationAttribut
   public logo_url!: string | null;
   public primary_color!: string | null;
   public secondary_color!: string | null;
+  public is_active!: boolean;
   public created_at!: Date;
 }
 
@@ -49,6 +55,11 @@ Business.init(
     secondary_color: {
       type: DataTypes.STRING(20),
       allowNull: true,
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
     created_at: {
       type: DataTypes.DATE,

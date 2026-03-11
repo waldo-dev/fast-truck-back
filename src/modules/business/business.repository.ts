@@ -7,14 +7,16 @@ export class BusinessRepository {
   public async findAll(businessId: number) {
     // Scoping: solo retornar el business del usuario autenticado
     const business = await Business.findAll({
-      where: { id: businessId },
+      where: { id: businessId, is_active: true },
     });
 
     return business;
   }
 
   public async findAllAdmin() {
-    const business = await Business.findAll();
+    const business = await Business.findAll({
+      where: { is_active: true },
+    });
     return business;
   }
 
@@ -25,7 +27,8 @@ export class BusinessRepository {
     //  throw new AppError('Business not found', 404);
     //}
 
-    const business = await Business.findByPk(Number(id), {
+    const business = await Business.findOne({
+      where: { id: Number(id), is_active: true },
       include: [{ association: 'operatingContext' }],
     });
 
@@ -50,7 +53,7 @@ export class BusinessRepository {
     }
 
     return Business.findAll({
-      where: { id: businessIds },
+      where: { id: businessIds, is_active: true },
       include: [{ association: 'operatingContext' }],
     });
   }
@@ -104,7 +107,7 @@ export class BusinessRepository {
       throw new AppError('Business not found', 404);
     }
 
-    await business.destroy();
+    await business.update({ is_active: false });
   }
 
   public async getOperatingContext(businessId: number) {

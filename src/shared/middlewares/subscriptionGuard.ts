@@ -54,7 +54,8 @@ export const demoReadOnlyGuard = (req: AuthRequest, res: Response, next: NextFun
 export const subscriptionGuard =
   (resource: GuardedResource) => async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id) {
+      const businessIdParam = req.query?.business_id ? Number(req.query.business_id) : req.business_id;
+      if (!businessIdParam || Number.isNaN(businessIdParam)) {
         res.status(403).json({
           success: false,
           error: { message: 'Business ID is required' },
@@ -64,7 +65,7 @@ export const subscriptionGuard =
 
       // Permitir demo solo lectura (la escritura ya fue bloqueada arriba)
       const subscription = await Subscription.findOne({
-        where: { business_id: req.business_id },
+        where: { business_id: businessIdParam },
         include: [{ model: Plan, as: 'plan' }],
       });
 
@@ -112,7 +113,7 @@ export const subscriptionGuard =
         return;
       }
 
-      const currentCount = await getCountForResource(req.business_id, resource);
+      const currentCount = await getCountForResource(businessIdParam, resource);
       if (currentCount >= limit) {
         res.status(402).json({
           success: false,

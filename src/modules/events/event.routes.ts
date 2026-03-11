@@ -4,8 +4,6 @@ import {
   authorize,
   injectBusinessId,
   validate,
-  demoReadOnlyGuard,
-  subscriptionGuard,
 } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { eventController } from './event.controller';
@@ -32,15 +30,11 @@ router.get('/:id/expenses', eventController.listExpenses);
 router.post(
   '/:id/expenses',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
-  demoReadOnlyGuard,
-  subscriptionGuard('events'),
   eventController.createExpense
 );
 router.delete(
   '/:id/expenses/:expenseId',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
-  demoReadOnlyGuard,
-  subscriptionGuard('events'),
   eventController.deleteExpense
 );
 
@@ -51,7 +45,6 @@ router.get('/:id', eventController.getById);
 router.post(
   '/',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
-  demoReadOnlyGuard,
   validate(createEventSchema),
   eventController.create
 );

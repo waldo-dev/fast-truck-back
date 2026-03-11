@@ -6,8 +6,6 @@ import {
   validate,
   validateParams,
   validateQuery,
-  demoReadOnlyGuard,
-  subscriptionGuard,
 } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { userController } from './user.controller';
@@ -57,8 +55,6 @@ router.get('/:id', validateParams(userParamsSchema), userController.getById);
 router.post(
   '/',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
-  demoReadOnlyGuard,
-  subscriptionGuard('users'),
   validate(createUserSchema),
   userController.create
 );

@@ -50,6 +50,30 @@ export class AuthController {
       next(error);
     }
   };
+
+  public refresh = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { refresh_token } = req.body || {};
+      if (!refresh_token) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'refresh_token is required',
+          },
+        });
+        return;
+      }
+
+      const result = await authService.refresh(refresh_token);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const authController = new AuthController();

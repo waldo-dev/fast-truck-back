@@ -28,6 +28,7 @@ import { EventProduct } from './EventProduct';
 import { EventOrganizer } from './EventOrganizer';
 import { EventExpense } from './EventExpense';
 import { BusinessOperatingContext } from './BusinessOperatingContext';
+import { RefreshToken } from './RefreshToken';
 
 let associationsInitialized = false;
 
@@ -177,6 +178,10 @@ export const initializeAssociations = (): void => {
   // User relations
   User.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
   Business.hasMany(User, { foreignKey: 'business_id', as: 'users' });
+
+  // Refresh tokens
+  User.hasMany(RefreshToken, { foreignKey: 'user_id', as: 'refreshTokens' });
+  RefreshToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
   // User-Business (many-to-many) relations
   User.belongsToMany(Business, { through: UserBusiness, foreignKey: 'user_id', as: 'businesses' });

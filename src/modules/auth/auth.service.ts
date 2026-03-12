@@ -3,7 +3,8 @@ import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { AppError } from '../../shared/errors';
 import { authRepository } from './auth.repository';
-import { Business, Subscription, Plan } from '../../shared/database/models';
+import { Business, Subscription, Plan, RefreshToken } from '../../shared/database/models';
+import crypto from 'crypto';
 
 interface LoginCredentials {
   email: string;
@@ -12,6 +13,7 @@ interface LoginCredentials {
 
 interface LoginResponse {
   token: string;
+  refresh_token: string;
   role: string;
   businessId: string | null;
   user: {
@@ -25,6 +27,36 @@ interface LoginResponse {
 }
 
 export class AuthService {
+  private generateAccessToken(payload: Record<string, unknown>) {
+    return jwt.sign(payload, env.JWT_SECRET as Secret, {
+      expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
+    });
+  }
+
+  private generateRawRefreshToken(): string {
+    return crypto.randomBytes(48).toString('base64url');
+  }
+
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  private async issueRefreshToken(userId: number): Promise<string> {
+    const raw = this.generateRawRefreshToken();
+    const tokenHash = this.hashToken(raw);
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 30);
+
+    await RefreshToken.create({
+      user_id: userId,
+      token_hash: tokenHash,
+      expires_at: expires,
+      revoked_at: null,
+    });
+
+    return raw;
+  }
+
   public async login(credentials: LoginCredentials): Promise<LoginResponse> {
     const { email, password } = credentials;
 
@@ -52,14 +84,69 @@ export class AuthService {
       business_id: user.business_id,
     };
 
-    const token = jwt.sign(tokenPayload, env.JWT_SECRET as Secret, {
-      expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
-    });
+    const token = this.generateAccessToken(tokenPayload);
+    const refreshToken = await this.issueRefreshToken(user.id);
 
     const businessIdString = user.business_id !== null ? String(user.business_id) : null;
 
     return {
       token,
+      refresh_token: refreshToken,
+      role: user.role,
+      businessId: businessIdString,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        business_id: user.business_id,
+        businessId: businessIdString,
+      },
+    };
+  }
+
+  public async refresh(refreshToken: string): Promise<LoginResponse> {
+    if (!refreshToken) {
+      throw new AppError('refresh_token is required', 400);
+    }
+
+    const tokenHash = this.hashToken(refreshToken);
+    const stored = await RefreshToken.findOne({
+      where: { token_hash: tokenHash },
+    });
+
+    if (!stored || stored.revoked_at) {
+      throw new AppError('Invalid refresh token', 401);
+    }
+
+    if (stored.expires_at && stored.expires_at.getTime() < Date.now()) {
+      throw new AppError('Refresh token expired', 401);
+    }
+
+    const user = await authRepository.findById(stored.user_id);
+
+    if (!user.active) {
+      throw new AppError('User account is inactive', 403);
+    }
+
+    // Rotar: revocar el actual y emitir uno nuevo
+    await stored.update({ revoked_at: new Date() });
+
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      business_id: user.business_id,
+    };
+
+    const newAccessToken = this.generateAccessToken(tokenPayload);
+    const newRefreshToken = await this.issueRefreshToken(user.id);
+    const businessIdString = user.business_id !== null ? String(user.business_id) : null;
+
+    return {
+      token: newAccessToken,
+      refresh_token: newRefreshToken,
       role: user.role,
       businessId: businessIdString,
       user: {

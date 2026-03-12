@@ -28,6 +28,7 @@ import { PaymentConfig } from './PaymentConfig';
 import { Plan } from './Plan';
 import { Subscription } from './Subscription';
 import { SubscriptionPayment } from './SubscriptionPayment';
+import { RefreshToken } from './RefreshToken';
 import { UserBusiness } from './UserBusiness';
 import { BusinessOperatingContext } from './BusinessOperatingContext';
 import { initializeAssociations } from './associations';
@@ -53,6 +54,7 @@ export {
   Plan,
   Subscription,
   SubscriptionPayment,
+  RefreshToken,
   Product,
   ProductOption,
   ProductOptionRecipe,

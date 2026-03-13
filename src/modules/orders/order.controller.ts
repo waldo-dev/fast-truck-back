@@ -400,16 +400,6 @@ export class OrderController {
 
   public getById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.business_id) {
-        res.status(403).json({
-          success: false,
-          error: {
-            message: 'Business ID is required',
-          },
-        });
-        return;
-      }
-
       const id = parseInt(req.params.id, 10);
 
       if (isNaN(id)) {

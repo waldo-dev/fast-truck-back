@@ -29,6 +29,8 @@ import { EventOrganizer } from './EventOrganizer';
 import { EventExpense } from './EventExpense';
 import { BusinessOperatingContext } from './BusinessOperatingContext';
 import { RefreshToken } from './RefreshToken';
+import { CashRegister } from './CashRegister';
+import { CashMovement } from './CashMovement';
 
 let associationsInitialized = false;
 
@@ -182,6 +184,13 @@ export const initializeAssociations = (): void => {
   // Refresh tokens
   User.hasMany(RefreshToken, { foreignKey: 'user_id', as: 'refreshTokens' });
   RefreshToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+  // Cash registers
+  CashRegister.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
+  CashRegister.belongsTo(Location, { foreignKey: 'location_id', as: 'location' });
+  CashRegister.hasMany(CashMovement, { foreignKey: 'cash_register_id', as: 'movements' });
+  CashMovement.belongsTo(CashRegister, { foreignKey: 'cash_register_id', as: 'cashRegister' });
+  CashMovement.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
   // User-Business (many-to-many) relations
   User.belongsToMany(Business, { through: UserBusiness, foreignKey: 'user_id', as: 'businesses' });

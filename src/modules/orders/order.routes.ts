@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate, validateParams, validateQuery } from '../../shared/middlewares';
+import { authenticate, authorize, validate, validateParams, validateQuery } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { orderController } from './order.controller';
 import {
@@ -13,15 +13,19 @@ import {
 
 const router = Router();
 
-// Todas las rutas requieren autenticación y business_id
+// Public: GET /orders - listar (filtros por status, order_source, customer_id, event_id, business_id)
+router.get('/', orderController.getAll);
+
+// Public: GET /orders/:id - detalle
+router.get('/:id', validateParams(orderParamsSchema), orderController.getById);
+
+// Rutas protegidas
 router.use(authenticate);
 
 // GET /orders/by-user/:userId - Listar pedidos de todos los negocios asociados a un usuario
 router.get('/by-user/:userId', validateParams(orderUserParamsSchema), orderController.getByUserBusinesses);
 // GET /orders/by-user/:userId/csv - Descargar CSV de pedidos de todos los negocios asociados a un usuario
 router.get('/by-user/:userId/csv', validateParams(orderUserParamsSchema), orderController.getByUserBusinessesCsv);
-
-router.use(injectBusinessId);
 
 // GET /orders/history - Historial con filtros (ADMIN, BUSINESS_OWNER, LOCAL_OPERATOR)
 router.get('/history', validateQuery(orderHistoryQuerySchema), orderController.getHistory);
@@ -33,18 +37,10 @@ router.get(
   orderController.getCloseout
 );
 
-// GET /orders - Listar pedidos (ADMIN y LOCAL_OPERATOR pueden leer)
-// Query params: status, order_source, customer_id
-router.get('/', orderController.getAll);
-
-// GET /orders/:id - Obtener pedido por ID (ADMIN y LOCAL_OPERATOR pueden leer)
-router.get('/:id', validateParams(orderParamsSchema), orderController.getById);
-
 // POST /orders - Crear pedido
-// ADMIN puede crear cualquier tipo, LOCAL_OPERATOR solo WHATSAPP
 router.post('/', validate(createOrderSchema), orderController.create);
 
-// PATCH /orders/:id/status - Actualizar estado del pedido (solo ADMIN)
+// PATCH /orders/:id/status - Actualizar estado del pedido
 router.patch(
   '/:id/status',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),

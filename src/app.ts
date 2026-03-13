@@ -20,6 +20,7 @@ import publicRoutes from './modules/public/public.routes';
 import planRoutes from './modules/plans/plan.routes';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 import inventoryRoutes from './modules/inventory/inventory.routes';
+import cashRegisterRoutes from './modules/cash-registers/cash-register.routes';
 
 const createApp = (): Application => {
   const app = express();
@@ -71,6 +72,7 @@ const createApp = (): Application => {
   app.use('/public', publicRoutes);
   app.use('/plans', planRoutes);
   app.use('/subscriptions', subscriptionRoutes);
+  app.use('/', cashRegisterRoutes);
 
   // Error handlers (deben ir al final)
   app.use(notFoundHandler);

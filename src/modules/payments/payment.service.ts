@@ -1,6 +1,7 @@
 import { AppError } from '../../shared/errors';
 import { UserRole } from '../../shared/database/models/enums';
 import { paymentRepository } from './payment.repository';
+import { cashRegisterService } from '../cash-registers/cash-register.service';
 
 export class PaymentService {
   public async getPaymentsByOrder(orderId: number, businessId: number) {
@@ -25,6 +26,13 @@ export class PaymentService {
     const payment = await paymentRepository.create({
       ...data,
       businessId,
+    });
+
+    await cashRegisterService.recordPaymentMovement({
+      business_id: businessId,
+      order_id: data.order_id,
+      amount: data.amount,
+      payment_method: payment.payment_method,
     });
 
     return payment;

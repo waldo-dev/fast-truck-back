@@ -5,8 +5,14 @@ export const customerUserParamsSchema = z.object({
 });
 
 export const createCustomerSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  phone: z.string().min(6, 'Phone is too short'),
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be at most 100 characters'),
+  phone: z
+    .string()
+    .min(6, 'Phone is too short')
+    .max(30, 'Phone must be at most 30 characters'),
   notes: z.string().max(500, 'Notes too long').optional().nullable(),
   address: z
     .object({

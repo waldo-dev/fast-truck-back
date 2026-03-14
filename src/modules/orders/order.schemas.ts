@@ -8,8 +8,16 @@ const customerAddressSchema = z.object({
 });
 
 const customerSchema = z.object({
-  name: z.string().min(1, 'Customer name is required'),
-  phone: z.string().min(6, 'Phone is too short').optional().nullable(),
+  name: z
+    .string()
+    .min(1, 'Customer name is required')
+    .max(100, 'Customer name must be at most 100 characters'),
+  phone: z
+    .string()
+    .min(6, 'Phone is too short')
+    .max(30, 'Phone must be at most 30 characters')
+    .optional()
+    .nullable(),
   notes: z.string().max(500, 'Notes too long').optional().nullable(),
   address: customerAddressSchema.optional(),
 });
@@ -26,7 +34,11 @@ export const createOrderSchema = z
     order_type: z.nativeEnum(OrderType, {
       errorMap: () => ({ message: 'Order type must be DELIVERY, PICKUP, or LOCAL' }),
     }),
-    payment_method: z.nativeEnum(PaymentMethod).optional(),
+    payment_method: z.nativeEnum(PaymentMethod, {
+      errorMap: () => ({
+        message: 'Payment method must be CASH, CARD, TRANSFER, WEBPAY, DEBIT_CARD, or CREDIT_CARD',
+      }),
+    }).optional(),
     status: z.nativeEnum(OrderStatus).optional(),
     items: z
       .array(

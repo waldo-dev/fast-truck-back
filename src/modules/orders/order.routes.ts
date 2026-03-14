@@ -16,8 +16,8 @@ const router = Router();
 // Public: GET /orders - listar (filtros por status, order_source, customer_id, event_id, business_id)
 router.get('/', orderController.getAll);
 
-// Public: GET /orders/:id - detalle
-router.get('/:id', validateParams(orderParamsSchema), orderController.getById);
+// Public: GET /orders/:id - detalle (solo IDs numéricos para no interceptar rutas como /history)
+router.get('/:id(\\d+)', validateParams(orderParamsSchema), orderController.getById);
 
 // Rutas protegidas
 router.use(authenticate);

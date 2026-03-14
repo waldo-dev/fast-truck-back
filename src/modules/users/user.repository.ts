@@ -50,15 +50,10 @@ export class UserRepository {
     return user;
   }
 
-  public async findByEmail(email: string, businessId: number) {
-    const user = await User.findOne({
-      where: {
-        email,
-        business_id: businessId,
-      },
+  public async findByEmail(email: string) {
+    return User.findOne({
+      where: { email },
     });
-
-    return user;
   }
 
   public async findAllByBusiness(businessId: number) {
@@ -176,7 +171,7 @@ export class UserRepository {
     name: string;
     role: UserRole;
   }) {
-    const existingUser = await this.findByEmail(data.email, data.business_id);
+    const existingUser = await this.findByEmail(data.email);
     if (existingUser) {
       throw new AppError('Email already in use', 400);
     }
@@ -210,8 +205,8 @@ export class UserRepository {
 
     // Si se cambia el email, verificar que no esté en uso
     if (data.email && data.email !== user.email) {
-      const existingUser = await this.findByEmail(data.email, businessId);
-      if (existingUser) {
+      const existingUser = await this.findByEmail(data.email);
+      if (existingUser && existingUser.id !== user.id) {
         throw new AppError('Email already in use', 400);
       }
     }

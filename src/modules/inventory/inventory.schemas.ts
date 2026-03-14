@@ -13,18 +13,18 @@ export const listItemsQuerySchema = z.object({
 });
 
 export const createItemSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1).max(100, 'Name must be at most 100 characters'),
   unit: z.nativeEnum(InventoryUnit),
-  cost_per_item: z.number().nonnegative().optional(),
-  min_stock: z.number().nonnegative().optional(),
+  cost_per_item: z.coerce.number().nonnegative().optional(),
+  min_stock: z.coerce.number().nonnegative().optional(),
   active: z.boolean().optional(),
 });
 
 export const updateItemSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: z.string().min(1).max(100, 'Name must be at most 100 characters').optional(),
   unit: z.nativeEnum(InventoryUnit).optional(),
-  cost_per_item: z.number().nonnegative().optional(),
-  min_stock: z.number().nonnegative().optional(),
+  cost_per_item: z.coerce.number().nonnegative().optional(),
+  min_stock: z.coerce.number().nonnegative().optional(),
   active: z.boolean().optional(),
 });
 
@@ -37,20 +37,20 @@ export const paramsMovementSchema = z.object({
 });
 
 export const createMovementSchema = z.object({
-  inventory_item_id: z.number().int().positive(),
-  quantity: z.number().positive(),
+  inventory_item_id: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
   movement_type: z.nativeEnum(InventoryMovementType),
   reason: z.string().max(150).optional().nullable(),
-  event_id: z.number().int().positive().optional().nullable(),
-  location_id: z.number().int().positive().optional().nullable(),
+  event_id: z.coerce.number().int().positive().optional().nullable(),
+  location_id: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const setRecipesSchema = z.object({
   recipes: z
     .array(
       z.object({
-        inventory_item_id: z.number().int().positive(),
-        quantity_required: z.number().positive(),
+        inventory_item_id: z.coerce.number().int().positive(),
+        quantity_required: z.coerce.number().positive(),
       })
     )
     .min(1, 'At least one recipe row is required'),

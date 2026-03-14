@@ -2,6 +2,12 @@ import { z } from 'zod';
 import { PaymentProvider, PaymentEnvironment } from '../../shared/database/models/enums';
 
 export const createPaymentConfigSchema = z.object({
+  business_id: z
+    .coerce
+    .number()
+    .int()
+    .positive('Business ID must be a positive integer')
+    .optional(),
   provider: z.nativeEnum(PaymentProvider, {
     errorMap: () => ({ message: 'Provider must be WEBPAY' }),
   }),

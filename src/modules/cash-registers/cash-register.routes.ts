@@ -1,8 +1,13 @@
 import { Router } from 'express';
-import { authenticate, authorize, validate } from '../../shared/middlewares';
+import { authenticate, authorize, validate, validateQuery } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { cashRegisterController } from './cash-register.controller';
-import { openRegisterSchema, closeRegisterSchema, movementSchema } from './cash-register.schemas';
+import {
+  openRegisterSchema,
+  closeRegisterSchema,
+  movementSchema,
+  historyQuerySchema,
+} from './cash-register.schemas';
 
 const router = Router();
 
@@ -31,9 +36,17 @@ router.get(
   cashRegisterController.getActive
 );
 
+// Historial de cajas
+router.get(
+  '/cash-registers/history',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
+  validateQuery(historyQuerySchema),
+  cashRegisterController.getHistory
+);
+
 // Agregar movimiento
 router.post(
-  '/cash-registers/movements',
+  '/cash-registers/:id/movements',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
   validate(movementSchema),
   cashRegisterController.addMovement
@@ -46,7 +59,16 @@ router.get(
   cashRegisterController.listMovements
 );
 
+// Resumen de caja
+router.get(
+  '/cash-registers/:id/summary',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
+  cashRegisterController.getSummary
+);
+
 export default router;
+
+
 
 
 

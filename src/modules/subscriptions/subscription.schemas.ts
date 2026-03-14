@@ -6,6 +6,12 @@ const dateTime = z
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/, 'Must be ISO datetime in UTC (e.g. 2026-02-02T00:00:00.000Z)');
 
 export const createSubscriptionSchema = z.object({
+  business_id: z
+    .coerce
+    .number()
+    .int()
+    .positive('business_id is required')
+    .optional(),
   plan_id: z.number().int().positive('plan_id is required'),
   status: z.nativeEnum(SubscriptionStatus).optional(),
   trial_ends_at: dateTime.optional().nullable(),
@@ -34,7 +40,7 @@ export const subscriptionParamsSchema = z.object({
 
 export const createSubscriptionPaymentSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
-  currency: z.string().max(10).optional(),
+  currency: z.string().max(10).default('CLP'),
   status: z.nativeEnum(PaymentStatus).optional(),
   provider: z.string().max(50).optional().nullable(),
   provider_payment_id: z.string().max(150).optional().nullable(),

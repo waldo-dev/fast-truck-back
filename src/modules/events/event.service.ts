@@ -104,13 +104,13 @@ export class EventService {
   ) {
     return eventRepository.addExpense({
       event_id: eventId,
-      business_id: businessId,
       ...data,
     });
   }
 
-  public async listExpenses(eventId: number, businessId: number) {
-    return eventRepository.listExpenses(eventId, businessId);
+  public async listExpenses(eventId: number, businessId?: number | null) {
+    console.log("🚀 ~ EventService ~ listExpenses ~ businessId:", businessId)
+    return eventRepository.listExpenses(eventId);
   }
 
   public async deleteExpense(eventId: number, expenseId: number, businessId: number) {

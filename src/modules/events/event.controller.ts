@@ -233,7 +233,7 @@ export class EventController {
         return;
       }
 
-      const eventId = req.user?.id
+      const eventId = Number(req.params?.id)
       if (!eventId) {
         res.status(400).json({
           success: false,

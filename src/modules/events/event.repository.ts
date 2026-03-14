@@ -166,7 +166,7 @@ export class EventRepository {
 
   public async getSummary(eventId: number, businessId: number) {
     const event = await Event.findOne({
-      where: { id: eventId, business_id: businessId },
+      where: { id: eventId },
       include: [
         {
           model: Location,
@@ -360,13 +360,13 @@ export class EventRepository {
 
   public async addExpense(data: {
     event_id: number;
-    business_id: number;
+    business_id?: number | null;
     type?: string | null;
     description?: string | null;
     amount: number;
   }) {
     const event = await Event.findOne({
-      where: { id: data.event_id, business_id: data.business_id },
+      where: { id: data.event_id },
     });
 
     if (!event) {
@@ -383,9 +383,9 @@ export class EventRepository {
     return expense;
   }
 
-  public async listExpenses(eventId: number, businessId: number) {
+  public async listExpenses(eventId: number) {
     const event = await Event.findOne({
-      where: { id: eventId, business_id: businessId },
+      where: { id: eventId },
     });
 
     if (!event) {

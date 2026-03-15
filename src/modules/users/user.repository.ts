@@ -55,6 +55,12 @@ export class UserRepository {
       where: { email },
     });
   }
+  
+  public async findByEmailAndActive(email: string) {
+    return User.findOne({
+      where: { email, active: true },
+    });
+  }
 
   public async findAllByBusiness(businessId: number) {
     const links = await UserBusiness.findAll({
@@ -171,7 +177,7 @@ export class UserRepository {
     name: string;
     role: UserRole;
   }) {
-    const existingUser = await this.findByEmail(data.email);
+    const existingUser = await this.findByEmailAndActive(data.email);
     if (existingUser) {
       throw new AppError('Email already in use', 400);
     }

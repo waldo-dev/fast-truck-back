@@ -282,9 +282,9 @@ export class EventRepository {
   }
 
   public async getAnalytics(businessId: number, limit: number = 10) {
+    console.log("🚀 ~ EventRepository ~ getAnalytics ~ businessId:", businessId)
     const salesRows = await Order.findAll({
       where: {
-        business_id: businessId,
         event_id: { [Op.ne]: null },
       },
       attributes: [

@@ -102,6 +102,7 @@ export class EventService {
     businessId: number,
     data: { type?: string | null; description?: string | null; amount: number }
   ) {
+    console.log("🚀 ~ EventService ~ addExpense ~ businessId:", businessId)
     return eventRepository.addExpense({
       event_id: eventId,
       ...data,

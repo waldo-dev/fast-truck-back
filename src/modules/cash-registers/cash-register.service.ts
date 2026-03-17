@@ -19,7 +19,11 @@ export class CashRegisterService {
         throw new AppError('There is already an open cash register for this business/location', 400);
       }
     }
-    return cashRegisterRepository.createRegister(data);
+    const nextCode = await cashRegisterRepository.getNextCodeForBusiness(data.business_id);
+    return cashRegisterRepository.createRegister({
+      ...data,
+      code: nextCode,
+    });
   }
 
   public async closeRegister(id: number, data: { closed_by?: string | null; closing_amount?: number | null }) {

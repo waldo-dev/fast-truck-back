@@ -18,11 +18,25 @@ export class CashRegisterRepository {
     });
   }
 
+  public async getNextCodeForBusiness(businessId: number): Promise<number> {
+    const latestRegister = await CashRegister.findOne({
+      where: { business_id: businessId },
+      order: [
+        ['code', 'DESC'],
+        ['id', 'DESC'],
+      ],
+    });
+
+    const lastCode = latestRegister?.code ?? 0;
+    return Number.isFinite(lastCode) ? lastCode + 1 : 1;
+  }
+
   public async createRegister(data: {
     business_id: number;
     location_id?: number | null;
     opened_by?: string | null;
     opening_amount?: number | null;
+    code: number;
   }) {
     return CashRegister.create({
       business_id: data.business_id,
@@ -30,6 +44,7 @@ export class CashRegisterRepository {
       opened_by: data.opened_by ?? null,
       opened_at: new Date(),
       opening_amount: data.opening_amount ?? 0,
+      code: data.code,
       status: 'OPEN',
       closed_at: null,
       closed_by: null,

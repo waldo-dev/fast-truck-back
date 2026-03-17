@@ -198,14 +198,14 @@ export class UserRepository {
 
   public async update(
     id: number,
-    businessId: number,
     data: {
       name?: string;
       email?: string;
       role?: UserRole;
       active?: boolean;
       business_id?: number;
-    }
+    },
+    businessId?: number
   ) {
     const user = await this.findById(id, businessId);
 

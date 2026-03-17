@@ -13,6 +13,7 @@ interface OrderAttributes {
   order_type: OrderType;
   status: OrderStatus;
   total: number;
+  code: string | null;
   created_at: Date;
   confirmed_at: Date | null;
   ready_at: Date | null;
@@ -52,6 +53,7 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
   public order_type!: OrderType;
   public status!: OrderStatus;
   public total!: number;
+  public code!: string | null;
   public created_at!: Date;
   public confirmed_at!: Date | null;
   public ready_at!: Date | null;
@@ -116,6 +118,11 @@ Order.init(
       type: DataTypes.ENUM(...Object.values(OrderStatus)),
       allowNull: true,
       defaultValue: OrderStatus.CREATED,
+    },
+    code: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true,
     },
     total: {
       type: DataTypes.INTEGER,

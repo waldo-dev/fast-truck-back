@@ -15,6 +15,7 @@ export const openRegisterSchema = z
     openingAmount: z.coerce.number().nonnegative('openingAmount must be zero or positive').optional(),
     opening_amount: z.coerce.number().nonnegative().optional(),
     allowMultiple: z.boolean().optional(),
+    code: z.string().optional(),
   })
   .refine((data) => data.businessId || data.business_id, {
     message: 'businessId is required',
@@ -43,6 +44,7 @@ export const historyQuerySchema = z
     location_id: positiveId.optional().nullable(),
     locationId: positiveId.optional().nullable(),
     status: statusEnum.optional(),
+    code: z.string().optional(),
   })
   .refine((data) => data.business_id || data.businessId, {
     message: 'business_id is required',

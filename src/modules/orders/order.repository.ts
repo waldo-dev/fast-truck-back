@@ -27,6 +27,34 @@ import {
   InventoryMovementType,
 } from '../../shared/database/models/enums';
 
+const CODE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const CODE_LENGTH = 6;
+
+const generateRandomCode = () => {
+  let code = '';
+  for (let i = 0; i < CODE_LENGTH; i += 1) {
+    const index = Math.floor(Math.random() * CODE_CHARSET.length);
+    code += CODE_CHARSET[index];
+  }
+  return code;
+};
+
+const generateUniqueOrderCode = async (transaction?: Transaction) => {
+  const maxAttempts = 10;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const code = generateRandomCode();
+    const existing = await Order.findOne({
+      where: { code },
+      transaction,
+      attributes: ['id'],
+    });
+    if (!existing) {
+      return code;
+    }
+  }
+  throw new AppError('Unable to generate unique order code', 500);
+};
+
 export class OrderRepository {
   /**
    * Calcula el precio total de un item considerando opciones y promociones
@@ -701,6 +729,7 @@ export class OrderRepository {
       }
 
       // Crear orden
+      const code = await generateUniqueOrderCode(t);
       const order = await Order.create(
         {
           business_id: data.business_id,
@@ -712,6 +741,7 @@ export class OrderRepository {
           order_type: data.order_type,
           status: data.status || OrderStatus.CREATED,
           total,
+          code,
         },
         { transaction: t }
       );

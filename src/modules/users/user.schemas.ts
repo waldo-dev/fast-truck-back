@@ -18,6 +18,15 @@ export const updateUserSchema = z.object({
   business_ids: z.array(z.number().int().positive()).min(1, 'At least one business is required').optional(),
 });
 
+export const updateSelfSchema = z
+  .object({
+    name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters').optional(),
+    email: z.string().email('Invalid email format').optional(),
+  })
+  .refine((data) => data.name || data.email, {
+    message: 'At least one field (name or email) is required',
+  });
+
 export const updatePasswordSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });

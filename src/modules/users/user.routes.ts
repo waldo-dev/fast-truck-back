@@ -13,6 +13,7 @@ import {
   adminsOwnersQuerySchema,
   businessParamsSchema,
   createUserSchema,
+  updateSelfSchema,
   updateUserSchema,
   updatePasswordSchema,
   userParamsSchema,
@@ -44,6 +45,8 @@ router.get('/by-user/:userId', validateParams(userBusinessParamsSchema), userCon
 
 // Rutas que requieren business_id inyectado (scoping ADMIN/LOCAL_OPERATOR)
 router.use(injectBusinessId);
+
+router.patch('/me', validate(updateSelfSchema), userController.updateSelf);
 
 // GET /users - Listar usuarios del negocio (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get('/', userController.getAll);

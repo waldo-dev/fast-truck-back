@@ -14,6 +14,7 @@ interface CashRegisterAttributes {
   opening_amount: number | null;
   closing_amount: number | null;
   status: string | null;
+  code: number;
 }
 
 type CashRegisterCreationAttributes = Optional<CashRegisterAttributes, 'id'>;
@@ -32,6 +33,7 @@ export class CashRegister
   public opening_amount!: number | null;
   public closing_amount!: number | null;
   public status!: string | null;
+  public code!: number;
 }
 
 CashRegister.init(
@@ -77,6 +79,11 @@ CashRegister.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    code: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     sequelize,
@@ -84,6 +91,9 @@ CashRegister.init(
     timestamps: false,
   }
 );
+
+
+
 
 
 

@@ -1,11 +1,31 @@
 import { Response, NextFunction } from 'express';
+import { ParsedQs } from 'qs';
 import { AuthRequest } from '../../shared/middlewares';
 import { authService } from './auth.service';
+
+type BusinessIdQueryValue = undefined | null | string | ParsedQs | Array<string | ParsedQs>;
+
+const resolveBusinessIdFromQuery = (value: BusinessIdQueryValue): string | undefined => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    return resolveBusinessIdFromQuery(value[0]);
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return undefined;
+};
 
 export class AuthController {
   public login = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email, password } = req.body;
+      const businessIdFromQuery = resolveBusinessIdFromQuery(req.query.business_id);
 
       if (!email || !password) {
         res.status(400).json({
@@ -17,7 +37,7 @@ export class AuthController {
         return;
       }
 
-      const result = await authService.login({ email, password });
+      const result = await authService.login({ email, password }, businessIdFromQuery);
 
       res.status(200).json({
         success: true,
@@ -40,7 +60,8 @@ export class AuthController {
         return;
       }
 
-      const user = await authService.getCurrentUser(req.user.id);
+      const businessIdFromQuery = resolveBusinessIdFromQuery(req.query.business_id);
+      const user = await authService.getCurrentUser(req.user.id, businessIdFromQuery);
 
       res.status(200).json({
         success: true,
@@ -54,6 +75,7 @@ export class AuthController {
   public refresh = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { refresh_token } = req.body || {};
+      const businessIdFromQuery = resolveBusinessIdFromQuery(req.query.business_id);
       if (!refresh_token) {
         res.status(400).json({
           success: false,
@@ -64,7 +86,7 @@ export class AuthController {
         return;
       }
 
-      const result = await authService.refresh(refresh_token);
+      const result = await authService.refresh(refresh_token, businessIdFromQuery);
 
       res.status(200).json({
         success: true,

@@ -285,6 +285,38 @@ export class UserController {
     }
   };
 
+  public updateSelf = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(403).json({
+          success: false,
+          error: {
+            message: 'User is required',
+          },
+        });
+        return;
+      }
+
+      const { name, email } = req.body as { name?: string; email?: string };
+
+      const user = await userService.updateSelf(
+        req.user.id,
+        req.business_id,
+        {
+          name,
+          email,
+        }
+      );
+
+      res.status(200).json({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public delete = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.business_id || !req.user) {

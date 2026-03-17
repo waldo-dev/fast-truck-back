@@ -1,6 +1,6 @@
 import { AppError } from '../../shared/errors';
+import { Business, UserBusiness } from '../../shared/database/models';
 import { UserRole, OrderSource, OrderStatus, OrderType, PaymentMethod } from '../../shared/database/models/enums';
-import { UserBusiness } from '../../shared/database/models';
 import { orderRepository } from './order.repository';
 import { customerRepository } from '../customers/customer.repository';
 
@@ -196,8 +196,15 @@ export class OrderService {
     const businessIds = Array.from(new Set(userBusinesses.map((ub) => ub.business_id)));
     const orders = await orderRepository.findByBusinessIds(businessIds);
 
+    const businesses = await Business.findAll({
+      where: { id: businessIds },
+      attributes: ['id', 'name'],
+    });
+    const businessById = new Map(businesses.map((business) => [business.id, business.name]));
+
     const grouped = businessIds.map((businessId) => ({
       business_id: businessId,
+      business_name: businessById.get(businessId) ?? null,
       orders: orders.filter((order) => order.business_id === businessId),
     }));
 

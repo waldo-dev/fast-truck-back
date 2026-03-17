@@ -24,6 +24,30 @@ interface LoginResponse {
     business_id: number | null;
     businessId: string | null;
   };
+  business: BusinessContext | null;
+  subscription: SubscriptionContext | null;
+}
+
+interface BusinessContext {
+  id: number;
+  name: string;
+  brand_name: string | null;
+  logo_url: string | null;
+}
+
+interface PlanContext {
+  id: number;
+  name: string;
+}
+
+interface SubscriptionContext {
+  id: number;
+  status: string;
+  plan: PlanContext | null;
+  trial_ends_at: Date | null;
+  current_period_start: Date | null;
+  current_period_end: Date | null;
+  cancel_at_period_end: boolean | null;
 }
 
 export class AuthService {
@@ -57,7 +81,77 @@ export class AuthService {
     return raw;
   }
 
-  public async login(credentials: LoginCredentials): Promise<LoginResponse> {
+  private normalizeBusinessId(value?: string | number | null): number | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value === 'string' && value.trim() === '') {
+      return null;
+    }
+
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private async buildBusinessContext(businessId: number | null): Promise<{
+    business: BusinessContext | null;
+    subscription: SubscriptionContext | null;
+  }> {
+    if (businessId === null) {
+      return { business: null, subscription: null };
+    }
+
+    const business = await Business.findByPk(businessId, {
+      attributes: ['id', 'name', 'brand_name', 'logo_url'],
+    });
+
+    if (!business) {
+      return { business: null, subscription: null };
+    }
+
+    const subscriptionRecord = await Subscription.findOne({
+      where: { business_id: businessId },
+      include: [{ model: Plan, as: 'plan', attributes: ['id', 'name'] }],
+      order: [['created_at', 'DESC']],
+    });
+
+    let subscription: SubscriptionContext | null = null;
+
+    if (subscriptionRecord) {
+      const plan = subscriptionRecord.get('plan') as Plan | null;
+      subscription = {
+        id: subscriptionRecord.id,
+        status: subscriptionRecord.status,
+        plan: plan
+          ? {
+              id: plan.id,
+              name: plan.name,
+            }
+          : null,
+        trial_ends_at: subscriptionRecord.trial_ends_at,
+        current_period_start: subscriptionRecord.current_period_start,
+        current_period_end: subscriptionRecord.current_period_end,
+        cancel_at_period_end: subscriptionRecord.cancel_at_period_end,
+      };
+    }
+
+    return {
+      business: {
+        id: business.id,
+        name: business.name,
+        brand_name: business.brand_name,
+        logo_url: business.logo_url,
+      },
+      subscription,
+    };
+  }
+
+  public async login(
+    credentials: LoginCredentials,
+    businessIdFromQuery?: string | null
+  ): Promise<LoginResponse> {
     const { email, password } = credentials;
 
     const user = await authRepository.findByEmail(email);
@@ -88,6 +182,8 @@ export class AuthService {
     const refreshToken = await this.issueRefreshToken(user.id);
 
     const businessIdString = user.business_id !== null ? String(user.business_id) : null;
+    const normalizedBusinessId = this.normalizeBusinessId(businessIdFromQuery ?? user.business_id);
+    const businessContext = await this.buildBusinessContext(normalizedBusinessId);
 
     return {
       token,
@@ -102,10 +198,12 @@ export class AuthService {
         business_id: user.business_id,
         businessId: businessIdString,
       },
+      business: businessContext.business,
+      subscription: businessContext.subscription,
     };
   }
 
-  public async refresh(refreshToken: string): Promise<LoginResponse> {
+  public async refresh(refreshToken: string, businessIdFromQuery?: string | null): Promise<LoginResponse> {
     if (!refreshToken) {
       throw new AppError('refresh_token is required', 400);
     }
@@ -143,6 +241,8 @@ export class AuthService {
     const newAccessToken = this.generateAccessToken(tokenPayload);
     const newRefreshToken = await this.issueRefreshToken(user.id);
     const businessIdString = user.business_id !== null ? String(user.business_id) : null;
+    const normalizedBusinessId = this.normalizeBusinessId(businessIdFromQuery ?? user.business_id);
+    const businessContext = await this.buildBusinessContext(normalizedBusinessId);
 
     return {
       token: newAccessToken,
@@ -157,40 +257,16 @@ export class AuthService {
         business_id: user.business_id,
         businessId: businessIdString,
       },
+      business: businessContext.business,
+      subscription: businessContext.subscription,
     };
   }
 
-  public async getCurrentUser(userId: number) {
+  public async getCurrentUser(userId: number, businessIdFromQuery?: string | null) {
     const user = await authRepository.findById(userId);
 
-    let business: any = null;
-    let subscription: any = null;
-
-    if (user.business_id) {
-      // Buscar negocio
-      business = await Business.findByPk(user.business_id, {
-        attributes: ['id', 'name', 'brand_name', 'logo_url'],
-      });
-
-      // Última suscripción (más reciente por created_at)
-      const sub = await Subscription.findOne({
-        where: { business_id: user.business_id },
-        include: [{ model: Plan, as: 'plan', attributes: ['id', 'name'] }],
-        order: [['created_at', 'DESC']],
-      });
-
-      if (sub) {
-        subscription = {
-          id: sub.id,
-          status: sub.status,
-          plan: sub.get('plan'),
-          trial_ends_at: sub.trial_ends_at,
-          current_period_start: sub.current_period_start,
-          current_period_end: sub.current_period_end,
-          cancel_at_period_end: sub.cancel_at_period_end,
-        };
-      }
-    }
+    const normalizedBusinessId = this.normalizeBusinessId(businessIdFromQuery ?? user.business_id);
+    const { business, subscription } = await this.buildBusinessContext(normalizedBusinessId);
 
     return {
       id: user.id,

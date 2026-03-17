@@ -166,10 +166,14 @@ export class UserService {
       }
     }
 
-    const user = await userRepository.update(id, businessId, {
-      ...data,
-      ...(targetBusinessIds && targetBusinessIds.length > 0 ? { business_id: targetBusinessIds[0] } : {}),
-    });
+    const user = await userRepository.update(
+      id,
+      {
+        ...data,
+        ...(targetBusinessIds && targetBusinessIds.length > 0 ? { business_id: targetBusinessIds[0] } : {}),
+      },
+      businessId
+    );
 
     if (targetBusinessIds && targetBusinessIds.length > 0) {
       await userRepository.setBusinessLinks(user.id, targetBusinessIds);
@@ -215,6 +219,23 @@ export class UserService {
     const updatedUser = await userRepository.updatePassword(id, hashedPassword);
 
     return updatedUser;
+  }
+
+  public async updateSelf(
+    id: number,
+    businessId: number | undefined,
+    data: {
+      name?: string;
+      email?: string;
+    }
+  ) {
+    if (!data.name && !data.email) {
+      throw new AppError('At least one field is required', 400);
+    }
+
+    const user = await userRepository.update(id, { ...data }, businessId);
+
+    return user;
   }
 
   public async getUsersByUserBusinesses(

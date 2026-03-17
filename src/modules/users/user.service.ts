@@ -33,7 +33,7 @@ type DemoAccountResponse = {
   };
   metadata: {
     tipo_negocio: string;
-    telefono: string;
+    telefono?: string;
   };
 };
 
@@ -161,7 +161,7 @@ export class UserService {
     email_cliente: string;
     nombre_negocio: string;
     tipo_negocio: string;
-    telefono: string;
+    telefono?: string;
     pass: string;
   }): Promise<DemoAccountResponse> {
     const normalizedEmail = data.email_cliente.trim().toLowerCase();
@@ -180,6 +180,7 @@ export class UserService {
     await this.createDemoSubscription(business.id);
 
     const password = data.pass.trim();
+    const telefono = data.telefono?.trim();
 
     let user;
 
@@ -237,7 +238,7 @@ export class UserService {
       },
       metadata: {
         tipo_negocio: data.tipo_negocio,
-        telefono: data.telefono,
+        telefono,
       },
     };
   }

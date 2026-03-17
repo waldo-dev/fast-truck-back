@@ -67,9 +67,9 @@ export const createDemoUserSchema = z.object({
     .max(100, 'Tipo de negocio debe tener menos de 100 caracteres'),
   telefono: z
     .string()
-    .min(7, 'Teléfono debe tener al menos 7 caracteres')
     .max(20, 'Teléfono debe tener menos de 20 caracteres')
-    .regex(/^[0-9+\-\s()]+$/, 'Teléfono inválido'),
+    .regex(/^[0-9+\-\s()]+$/, 'Teléfono inválido')
+    .optional(),
   pass: z.string().min(6, 'Contraseña debe tener al menos 6 caracteres'),
 });
 

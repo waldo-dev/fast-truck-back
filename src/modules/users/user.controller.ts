@@ -124,7 +124,6 @@ export class UserController {
   };
 
   public createDemoUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    console.log("🚀 ~ UserController ~ req:", req.headers.origin)
     try {
       const { nombre_cliente, email_cliente, nombre_negocio, tipo_negocio, telefono, pass } = req.body as {
         nombre_cliente: string;

@@ -4,6 +4,7 @@ import { errorHandler, notFoundHandler } from './shared/middlewares';
 import healthRoutes from './modules/health/health.routes';
 import authRoutes from './modules/auth/auth.routes';
 import businessRoutes from './modules/business/business.routes';
+import demoUserRoutes from './modules/users/demo-user.routes';
 import userRoutes from './modules/users/user.routes';
 import customerRoutes from './modules/customers/customer.routes';
 import categoryRoutes from './modules/categories/category.routes';
@@ -25,7 +26,7 @@ import cashRegisterRoutes from './modules/cash-registers/cash-register.routes';
 const createApp = (): Application => {
   const app = express();
 
-  const allowedOrigins = ['https://fast-trucks.chilsmart.com', 'http://localhost:3000', 'https://app.operfoods.com'];
+  const allowedOrigins = ['https://fast-trucks.chilsmart.com', 'http://localhost:3000', 'https://app.operfoods.com', 'https://n8n.chilsmart.com'];
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {
@@ -56,6 +57,7 @@ const createApp = (): Application => {
   app.use('/', healthRoutes);
   app.use('/auth', authRoutes);
   app.use('/business', businessRoutes);
+  app.use('/users/demo', demoUserRoutes);
   app.use('/users', userRoutes);
   app.use('/customers', customerRoutes);
   app.use('/categories', categoryRoutes);

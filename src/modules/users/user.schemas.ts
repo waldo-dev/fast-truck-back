@@ -51,4 +51,26 @@ export const adminsOwnersQuerySchema = z.object({
     .optional(),
 });
 
+export const createDemoUserSchema = z.object({
+  nombre_cliente: z
+    .string()
+    .min(1, 'Nombre del cliente es requerido')
+    .max(100, 'Nombre del cliente debe tener menos de 100 caracteres'),
+  email_cliente: z.string().email('Email del cliente inválido'),
+  nombre_negocio: z
+    .string()
+    .min(1, 'Nombre del negocio es requerido')
+    .max(100, 'Nombre del negocio debe tener menos de 100 caracteres'),
+  tipo_negocio: z
+    .string()
+    .min(1, 'Tipo de negocio es requerido')
+    .max(100, 'Tipo de negocio debe tener menos de 100 caracteres'),
+  telefono: z
+    .string()
+    .min(7, 'Teléfono debe tener al menos 7 caracteres')
+    .max(20, 'Teléfono debe tener menos de 20 caracteres')
+    .regex(/^[0-9+\-\s()]+$/, 'Teléfono inválido'),
+  pass: z.string().min(6, 'Contraseña debe tener al menos 6 caracteres'),
+});
+
 

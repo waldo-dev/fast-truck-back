@@ -1,8 +1,41 @@
 import bcrypt from 'bcrypt';
 import { AppError } from '../../shared/errors';
-import { UserRole } from '../../shared/database/models/enums';
+import { Plan, UserBusiness } from '../../shared/database/models';
+import { SubscriptionStatus, UserRole } from '../../shared/database/models/enums';
+import { businessRepository } from '../business/business.repository';
+import { subscriptionRepository } from '../subscriptions/subscription.repository';
 import { userRepository } from './user.repository';
-import { UserBusiness } from '../../shared/database/models';
+
+type DemoAccountResponse = {
+  user: {
+    id: number;
+    email: string;
+    name: string;
+    role: UserRole;
+    business_id: number | null;
+    active: boolean;
+    created_at: Date;
+    updated_at: Date;
+  };
+  business: {
+    id: number;
+    name: string;
+    brand_name: string | null;
+    logo_url: string | null;
+    primary_color: string | null;
+    secondary_color: string | null;
+    is_active: boolean;
+    created_at: Date;
+  };
+  credentials: {
+    email: string;
+    password: string;
+  };
+  metadata: {
+    tipo_negocio: string;
+    telefono: string;
+  };
+};
 
 export class UserService {
   private async getAllowedBusinessIds(userId: number, defaultBusinessId?: number | null) {
@@ -121,6 +154,112 @@ export class UserService {
     await userRepository.setBusinessLinks(user.id, targetBusinessIds);
 
     return user;
+  }
+
+  public async createDemoUser(data: {
+    nombre_cliente: string;
+    email_cliente: string;
+    nombre_negocio: string;
+    tipo_negocio: string;
+    telefono: string;
+    pass: string;
+  }): Promise<DemoAccountResponse> {
+    const normalizedEmail = data.email_cliente.trim().toLowerCase();
+
+    const existingUser = await userRepository.findByEmail(normalizedEmail);
+
+    if (existingUser && existingUser.active) {
+      throw new AppError('El correo ya está registrado', 400);
+    }
+
+    const business = await businessRepository.create({
+      name: data.nombre_negocio,
+      brand_name: data.tipo_negocio,
+    });
+
+    await this.createDemoSubscription(business.id);
+
+    const password = data.pass.trim();
+
+    let user;
+
+    if (existingUser) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await existingUser.update({
+        name: data.nombre_cliente,
+        password: hashedPassword,
+        role: UserRole.BUSINESS_OWNER,
+        business_id: business.id,
+        active: true,
+      });
+
+      user = await userRepository.findById(existingUser.id, business.id);
+    } else {
+      user = await userRepository.create({
+        business_id: business.id,
+        email: normalizedEmail,
+        password,
+        name: data.nombre_cliente,
+        role: UserRole.BUSINESS_OWNER,
+      });
+    }
+
+    await userRepository.setBusinessLinks(user.id, [business.id]);
+
+    const userPlain = user.get({ plain: true });
+    const businessPlain = business.get({ plain: true });
+
+    return {
+      user: {
+        id: userPlain.id,
+        email: userPlain.email,
+        name: userPlain.name,
+        role: userPlain.role,
+        business_id: userPlain.business_id,
+        active: userPlain.active,
+        created_at: userPlain.created_at,
+        updated_at: userPlain.updated_at,
+      },
+      business: {
+        id: businessPlain.id,
+        name: businessPlain.name,
+        brand_name: businessPlain.brand_name,
+        logo_url: businessPlain.logo_url,
+        primary_color: businessPlain.primary_color,
+        secondary_color: businessPlain.secondary_color,
+        is_active: businessPlain.is_active,
+        created_at: businessPlain.created_at,
+      },
+      credentials: {
+        email: normalizedEmail,
+        password,
+      },
+      metadata: {
+        tipo_negocio: data.tipo_negocio,
+        telefono: data.telefono,
+      },
+    };
+  }
+
+  private async createDemoSubscription(businessId: number) {
+    const now = new Date();
+    const trialEnds = new Date(now);
+    trialEnds.setDate(trialEnds.getDate() + 30);
+
+    const proPlan = await Plan.findOne({ where: { name: 'Pro' } });
+    const fallbackPlan = proPlan || (await Plan.findOne({ order: [['id', 'ASC']] }));
+
+    if (!fallbackPlan) {
+      throw new AppError('No hay planes disponibles para cuentas demo', 500);
+    }
+
+    await subscriptionRepository.create({
+      business_id: businessId,
+      plan_id: fallbackPlan.id,
+      status: SubscriptionStatus.TRIAL,
+      trial_ends_at: trialEnds,
+    });
   }
 
   public async updateUser(

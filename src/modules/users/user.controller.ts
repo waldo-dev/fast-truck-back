@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { userService } from './user.service';
@@ -117,6 +117,36 @@ export class UserController {
       res.status(200).json({
         success: true,
         data: users,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public createDemoUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    console.log("🚀 ~ UserController ~ req:", req.headers.origin)
+    try {
+      const { nombre_cliente, email_cliente, nombre_negocio, tipo_negocio, telefono, pass } = req.body as {
+        nombre_cliente: string;
+        email_cliente: string;
+        nombre_negocio: string;
+        tipo_negocio: string;
+        telefono: string;
+        pass: string;
+      };
+
+      const demoUser = await userService.createDemoUser({
+        nombre_cliente,
+        email_cliente,
+        nombre_negocio,
+        tipo_negocio,
+        telefono,
+        pass,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: demoUser,
       });
     } catch (error) {
       next(error);

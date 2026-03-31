@@ -280,11 +280,12 @@ export class UserController {
         return;
       }
 
-      const { name, email, role, active, business_ids } = req.body as {
+      const { name, email, role, active, business_ids, slug } = req.body as {
         name?: string;
         email?: string;
         role?: UserRole;
         active?: boolean;
+        slug?: string;
         business_ids?: number[];
       };
 
@@ -296,6 +297,7 @@ export class UserController {
           email,
           role,
           active,
+          slug,
         },
         business_ids,
         {

@@ -1,7 +1,7 @@
 import { Business, UserBusiness, BusinessOperatingContext, Order, Product, Customer } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
+import { BusinessStatus, OrderStatus } from '../../shared/database/models/enums';
 import { Op, fn, col } from 'sequelize';
-import { OrderStatus } from '../../shared/database/models/enums';
 
 export class BusinessRepository {
   public async findAll(businessId: number) {
@@ -61,9 +61,11 @@ export class BusinessRepository {
   public async create(data: {
     name: string;
     brand_name?: string | null;
+    slug?: string | null;
     logo_url?: string | null;
     primary_color?: string | null;
     secondary_color?: string | null;
+    status?: BusinessStatus;
     created_by_user_id?: number | null;
   }) {
     const business = await Business.create(data);
@@ -75,9 +77,11 @@ export class BusinessRepository {
     data: {
       name?: string;
       brand_name?: string | null;
+      slug?: string | null;
       logo_url?: string | null;
       primary_color?: string | null;
       secondary_color?: string | null;
+      status?: BusinessStatus;
     }
   ) {
     // Scoping: solo puede actualizar su propio business

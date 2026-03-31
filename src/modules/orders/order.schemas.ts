@@ -53,7 +53,6 @@ export const createOrderSchema = z
   })
   .refine(
     (data) => {
-      // Debe existir customer_id o customer
       return !!data.customer_id || !!data.customer;
     },
     {
@@ -63,7 +62,6 @@ export const createOrderSchema = z
   )
   .refine(
     (data) => {
-      // Si es un pedido de EVENT, debe venir event_id
       if (data.order_source === OrderSource.EVENT) {
         return !!data.event_id;
       }
@@ -76,7 +74,6 @@ export const createOrderSchema = z
   )
   .refine(
     (data) => {
-      // Si es DELIVERY, debe tener address_id o customer.address
       if (data.order_type === OrderType.DELIVERY) {
         return !!data.address_id || !!data.customer?.address;
       }
@@ -91,6 +88,7 @@ export const createOrderSchema = z
 export const updateOrderStatusSchema = z.object({
   status: z.nativeEnum(OrderStatus),
 });
+
 
 export const orderParamsSchema = z.object({
   id: z.string().regex(/^\d+$/, 'ID must be a number').transform(Number),

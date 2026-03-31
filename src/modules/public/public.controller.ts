@@ -2,6 +2,8 @@ import { Response, NextFunction } from 'express';
 import { Product, Promotion, Event, PaymentConfig } from '../../shared/database/models';
 import { ProductStatus, DiscountType, PaymentMethod } from '../../shared/database/models/enums';
 import { Op } from 'sequelize';
+import { orderService } from '../orders/order.service';
+import { AppError } from '../../shared/errors';
 
 export class PublicController {
   public getMenu = async (req: any, res: Response, next: NextFunction): Promise<void> => {
@@ -105,6 +107,34 @@ export class PublicController {
             start_date: p.start_date,
             end_date: p.end_date,
           })),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public createOrder = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const payload = req.body;
+      const businessId = req.business_id ?? payload.business_id;
+
+      if (!businessId) {
+        throw new AppError('Business ID is required', 400);
+      }
+
+      const body = {
+        ...payload,
+        business_id: businessId,
+      };
+
+      const order = await orderService.createOrder(body);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: order.id,
+          code: order.code,
         },
       });
     } catch (error) {

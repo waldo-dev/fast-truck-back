@@ -1,10 +1,11 @@
 import bcrypt from 'bcrypt';
 import { AppError } from '../../shared/errors';
 import { Plan, UserBusiness } from '../../shared/database/models';
-import { SubscriptionStatus, UserRole } from '../../shared/database/models/enums';
+import { BusinessStatus, SubscriptionStatus, UserRole } from '../../shared/database/models/enums';
 import { businessRepository } from '../business/business.repository';
 import { subscriptionRepository } from '../subscriptions/subscription.repository';
 import { userRepository } from './user.repository';
+import { buildSlug } from '../../shared/utils/slugify';
 
 type DemoAccountResponse = {
   user: {
@@ -172,9 +173,12 @@ export class UserService {
       throw new AppError('El correo ya está registrado', 400);
     }
 
+    const slug = buildSlug(data.tipo_negocio || data.nombre_negocio);
     const business = await businessRepository.create({
       name: data.nombre_negocio,
       brand_name: data.tipo_negocio,
+      slug,
+      status: BusinessStatus.ONBOARDING,
     });
 
     await this.createDemoSubscription(business.id);
@@ -271,6 +275,7 @@ export class UserService {
       email?: string;
       role?: UserRole;
       active?: boolean;
+      slug?: string;
     },
     businessIds: number[] | undefined,
     requester: { id: number; role: UserRole; businessId?: number | null }

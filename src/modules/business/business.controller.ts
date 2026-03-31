@@ -242,7 +242,7 @@ export class BusinessController {
         return;
       }
 
-      const { name, brand_name, primary_color, secondary_color } = req.body;
+      const { name, brand_name, primary_color, secondary_color, slug } = req.body;
       const file = req.file;
 
       let logoUrl: string | undefined;
@@ -255,6 +255,7 @@ export class BusinessController {
         {
           name,
           brand_name,
+          slug,
           ...(logoUrl ? { logo_url: logoUrl } : {}),
           primary_color,
           secondary_color,

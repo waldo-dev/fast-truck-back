@@ -1,10 +1,11 @@
 import { AppError } from '../../shared/errors';
-import { UserRole } from '../../shared/database/models/enums';
+import { BusinessStatus, UserRole } from '../../shared/database/models/enums';
 import { businessRepository } from './business.repository';
 import { UserBusiness } from '../../shared/database/models/UserBusiness';
 import { subscriptionRepository } from '../subscriptions/subscription.repository';
 import { SubscriptionStatus } from '../../shared/database/models/enums';
 import { Plan } from '../../shared/database/models';
+import { buildSlug } from '../../shared/utils/slugify';
 
 export class BusinessService {
   public async getAllbusiness(businessId: number) {
@@ -43,8 +44,12 @@ export class BusinessService {
       throw new AppError('Only ADMIN or BUSINESS_OWNER can create business', 403);
     }
 
+    const slug = buildSlug(data.brand_name || data.name);
+
     const business = await businessRepository.create({
       ...data,
+      slug,
+      status: BusinessStatus.ONBOARDING,
       created_by_user_id: userId,
     });
 
@@ -104,6 +109,7 @@ export class BusinessService {
       logo_url?: string | null;
       primary_color?: string | null;
       secondary_color?: string | null;
+      slug?: string;
     },
     userRole: UserRole
   ) {
@@ -112,7 +118,12 @@ export class BusinessService {
       throw new AppError('Only ADMIN or BUSINESS_OWNER can update business', 403);
     }
 
-    const business = await businessRepository.update(id, data);
+    const updatePayload = {
+      ...data,
+      ...(data.slug !== null ? { slug: data.slug } : {}),
+    };
+
+    const business = await businessRepository.update(id, updatePayload);
     return business;
   }
 

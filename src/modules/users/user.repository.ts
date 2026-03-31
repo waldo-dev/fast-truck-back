@@ -204,6 +204,7 @@ export class UserRepository {
       role?: UserRole;
       active?: boolean;
       business_id?: number;
+      slug?: string;
     },
     businessId?: number
   ) {

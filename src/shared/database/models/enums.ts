@@ -65,6 +65,11 @@ export enum UserRole {
   LOCAL_OPERATOR = 'LOCAL_OPERATOR',
 }
 
+export enum BusinessStatus {
+  ONBOARDING = 'ONBOARDING',
+  ACTIVE = 'ACTIVE',
+}
+
 export enum DiscountType {
   FIXED = 'FIXED',
   PERCENTAGE = 'PERCENTAGE',

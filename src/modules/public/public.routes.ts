@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { extractBusinessId } from '../../shared/middlewares';
+import { extractBusinessId, validate } from '../../shared/middlewares';
 import { publicController } from './public.controller';
+import { createOrderSchema } from '../orders/order.schemas';
 
 const router = Router();
 
@@ -9,6 +10,9 @@ router.use(extractBusinessId);
 
 // GET /public/menu - Menú público (productos + promos)
 router.get('/menu', publicController.getMenu);
+
+// POST /public/orders - Crear pedido público
+router.post('/orders', extractBusinessId, validate(createOrderSchema), publicController.createOrder);
 
 // GET /public/events - Eventos activos
 router.get('/events', publicController.getEvents);

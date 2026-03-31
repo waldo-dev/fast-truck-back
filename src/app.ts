@@ -62,6 +62,7 @@ const createApp = (): Application => {
   app.use('/customers', customerRoutes);
   app.use('/categories', categoryRoutes);
   app.use('/products', productRoutes);
+  app.use('/public', publicRoutes);
   app.use('/', productOptionRoutes); // /products/:id/options y /product-options/:id
   app.use('/promotions', promotionRoutes);
   app.use('/locations', locationRoutes);

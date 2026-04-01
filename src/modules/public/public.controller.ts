@@ -114,6 +114,38 @@ export class PublicController {
     }
   };
 
+  public getMenuTemplate = (_req: any, res: Response): void => {
+    const headers = [
+      'business_id',
+      'name',
+      'category_id',
+      'category_name',
+      'description',
+      'price',
+      'status',
+      'sku',
+      'image_url',
+    ];
+
+    const exampleRow = [
+      '123', // business_id placeholder
+      'Pizza Margherita',
+      '10',
+      'Pizzas',
+      'Salsa de tomate, mozzarella, albahaca',
+      '8990',
+      'ACTIVE',
+      'SKU-123',
+      'https://example.com/margherita.jpg',
+    ];
+
+    const csvContent = [headers.join(';'), exampleRow.join(';')].join('\n');
+
+    res.header('Content-Type', 'text/csv');
+    res.header('Content-Disposition', 'attachment; filename="menu-template.csv"');
+    res.status(200).send(csvContent);
+  };
+
   public createOrder = async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
       const payload = req.body;

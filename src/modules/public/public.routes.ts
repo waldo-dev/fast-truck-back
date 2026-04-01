@@ -5,6 +5,9 @@ import { createOrderSchema } from '../orders/order.schemas';
 
 const router = Router();
 
+// GET /public/menu/template - Plantilla CSV de productos
+router.get('/menu/template', publicController.getMenuTemplate);
+
 // Endpoints públicos (solo requieren business_id)
 router.use(extractBusinessId);
 

@@ -1,7 +1,15 @@
 import { Router } from 'express';
-import { authenticate, authorize, validate, validateParams, validateQuery } from '../../shared/middlewares';
+import {
+  authenticate,
+  authorize,
+  validate,
+  validateParams,
+  validateQuery,
+} from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { orderController } from './order.controller';
+import { Order } from '../../shared/database/models';
+import { protectResource } from '../../shared/middlewares/businessAccess';
 import {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -13,22 +21,41 @@ import {
 
 const router = Router();
 
+router.use(authenticate);
+router.param(
+  'id',
+  protectResource(async id => (await Order.findByPk(id))?.business_id)
+);
+
 // Public: GET /orders - listar (filtros por status, order_source, customer_id, event_id, business_id)
 router.get('/', orderController.getAll);
 
 // Public: GET /orders/:id - detalle (solo IDs numéricos para no interceptar rutas como /history)
-router.get('/:id(\\d+)', validateParams(orderParamsSchema), orderController.getById);
-
-// Rutas protegidas
-router.use(authenticate);
+router.get(
+  '/:id(\\d+)',
+  validateParams(orderParamsSchema),
+  orderController.getById
+);
 
 // GET /orders/by-user/:userId - Listar pedidos de todos los negocios asociados a un usuario
-router.get('/by-user/:userId', validateParams(orderUserParamsSchema), orderController.getByUserBusinesses);
+router.get(
+  '/by-user/:userId',
+  validateParams(orderUserParamsSchema),
+  orderController.getByUserBusinesses
+);
 // GET /orders/by-user/:userId/csv - Descargar CSV de pedidos de todos los negocios asociados a un usuario
-router.get('/by-user/:userId/csv', validateParams(orderUserParamsSchema), orderController.getByUserBusinessesCsv);
+router.get(
+  '/by-user/:userId/csv',
+  validateParams(orderUserParamsSchema),
+  orderController.getByUserBusinessesCsv
+);
 
 // GET /orders/history - Historial con filtros (ADMIN, BUSINESS_OWNER, LOCAL_OPERATOR)
-router.get('/history', validateQuery(orderHistoryQuerySchema), orderController.getHistory);
+router.get(
+  '/history',
+  validateQuery(orderHistoryQuerySchema),
+  orderController.getHistory
+);
 // GET /orders/closeout - Resumen de cierre de caja
 router.get(
   '/closeout',
@@ -50,8 +77,11 @@ router.patch(
 );
 
 // DELETE /orders/:id - Eliminar pedido (solo ADMIN)
-router.delete('/:id', authorize(UserRole.ADMIN), validateParams(orderParamsSchema), orderController.delete);
+router.delete(
+  '/:id',
+  authorize(UserRole.ADMIN),
+  validateParams(orderParamsSchema),
+  orderController.delete
+);
 
 export default router;
-
-

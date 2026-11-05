@@ -18,6 +18,7 @@ export class CustomerService {
    * Envía OTP a un teléfono (mock)
    */
   public async sendOtp(phone: string, _businessId: number) {
+    void _businessId;
     // Validar formato de teléfono básico
     if (!phone || phone.length < 10) {
       throw new AppError('Invalid phone number', 400);
@@ -35,7 +36,12 @@ export class CustomerService {
   /**
    * Verifica OTP y crea/obtiene customer
    */
-  public async verifyOtp(phone: string, code: string, businessId: number, name?: string) {
+  public async verifyOtp(
+    phone: string,
+    code: string,
+    businessId: number,
+    name?: string
+  ) {
     const isValid = await otpService.verifyOtp(phone, code);
 
     if (!isValid) {
@@ -80,10 +86,28 @@ export class CustomerService {
     return customer;
   }
 
-  public async createCustomerForBusiness(businessId: number, data: { name: string; phone: string; notes?: string | null; address?: { address: string; notes?: string | null; is_default?: boolean } }) {
-    const existing = await customerRepository.findByPhone(data.phone, businessId);
+  public async createCustomerForBusiness(
+    businessId: number,
+    data: {
+      name: string;
+      phone: string;
+      notes?: string | null;
+      address?: {
+        address: string;
+        notes?: string | null;
+        is_default?: boolean;
+      };
+    }
+  ) {
+    const existing = await customerRepository.findByPhone(
+      data.phone,
+      businessId
+    );
     if (existing) {
-      throw new AppError('Customer with this phone already exists in this business', 400);
+      throw new AppError(
+        'Customer with this phone already exists in this business',
+        400
+      );
     }
 
     const customer = await customerRepository.create({
@@ -145,11 +169,18 @@ export class CustomerService {
     return addresses;
   }
 
-  public async getAddressById(addressId: number, customerId: number, businessId: number) {
+  public async getAddressById(
+    addressId: number,
+    customerId: number,
+    businessId: number
+  ) {
     // Verificar que el customer pertenezca al business
     await customerRepository.findById(customerId, businessId);
 
-    const address = await customerRepository.findAddressById(addressId, customerId);
+    const address = await customerRepository.findAddressById(
+      addressId,
+      customerId
+    );
     return address;
   }
 
@@ -185,11 +216,19 @@ export class CustomerService {
     // Verificar que el customer pertenezca al business
     await customerRepository.findById(customerId, businessId);
 
-    const address = await customerRepository.updateAddress(addressId, customerId, data);
+    const address = await customerRepository.updateAddress(
+      addressId,
+      customerId,
+      data
+    );
     return address;
   }
 
-  public async deleteAddress(addressId: number, customerId: number, businessId: number) {
+  public async deleteAddress(
+    addressId: number,
+    customerId: number,
+    businessId: number
+  ) {
     // Verificar que el customer pertenezca al business
     await customerRepository.findById(customerId, businessId);
 
@@ -220,7 +259,7 @@ export class CustomerService {
     requester: { id: number; role: UserRole; businessId?: number | null }
   ) {
     const isSelf = requester.id === targetUserId;
-    const isAdminOrOwner = [UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(requester.role);
+    const isAdminOrOwner = requester.role === UserRole.ADMIN;
 
     if (!isSelf && !isAdminOrOwner) {
       throw new AppError('Not authorized to view customers for this user', 403);
@@ -256,4 +295,3 @@ export class CustomerService {
 }
 
 export const customerService = new CustomerService();
-

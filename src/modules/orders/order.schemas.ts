@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { OrderSource, OrderStatus, OrderType, PaymentMethod } from '../../shared/database/models/enums';
+import {
+  OrderSource,
+  OrderStatus,
+  OrderType,
+  PaymentMethod,
+} from '../../shared/database/models/enums';
 
 const customerAddressSchema = z.object({
   address: z.string().min(1, 'Address is required'),
@@ -24,35 +29,71 @@ const customerSchema = z.object({
 
 export const createOrderSchema = z
   .object({
-    customer_id: z.number().int().positive('Customer ID must be a positive integer').optional(),
+    request_key: z
+      .string()
+      .min(16)
+      .max(100)
+      .regex(/^[a-zA-Z0-9_-]+$/),
+    cash_register_id: z.number().int().positive().optional(),
+    payment_received: z.boolean().optional(),
+    customer_id: z
+      .number()
+      .int()
+      .positive('Customer ID must be a positive integer')
+      .optional(),
     customer: customerSchema.optional(),
-    address_id: z.number().int().positive('Address ID must be a positive integer').optional().nullable(),
-    event_id: z.number().int().positive('Event ID must be a positive integer').optional().nullable(),
+    address_id: z
+      .number()
+      .int()
+      .positive('Address ID must be a positive integer')
+      .optional()
+      .nullable(),
+    event_id: z
+      .number()
+      .int()
+      .positive('Event ID must be a positive integer')
+      .optional()
+      .nullable(),
     order_source: z.nativeEnum(OrderSource, {
-      errorMap: () => ({ message: 'Order source must be POS, WHATSAPP, ONLINE, or EVENT' }),
+      errorMap: () => ({
+        message: 'Order source must be POS, WHATSAPP, ONLINE, or EVENT',
+      }),
     }),
     order_type: z.nativeEnum(OrderType, {
-      errorMap: () => ({ message: 'Order type must be DELIVERY, PICKUP, or LOCAL' }),
-    }),
-    payment_method: z.nativeEnum(PaymentMethod, {
       errorMap: () => ({
-        message: 'Payment method must be CASH, CARD, TRANSFER, WEBPAY, DEBIT_CARD, or CREDIT_CARD',
+        message: 'Order type must be DELIVERY, PICKUP, or LOCAL',
       }),
-    }).optional(),
+    }),
+    payment_method: z
+      .nativeEnum(PaymentMethod, {
+        errorMap: () => ({
+          message:
+            'Payment method must be CASH, CARD, TRANSFER, WEBPAY, DEBIT_CARD, or CREDIT_CARD',
+        }),
+      })
+      .optional(),
     status: z.nativeEnum(OrderStatus).optional(),
     items: z
       .array(
         z.object({
-          product_id: z.number().int().positive('Product ID must be a positive integer'),
-          quantity: z.number().int().positive('Quantity must be a positive integer'),
+          product_id: z
+            .number()
+            .int()
+            .positive('Product ID must be a positive integer'),
+          quantity: z
+            .number()
+            .int()
+            .positive('Quantity must be a positive integer')
+            .max(999),
           selected_option_ids: z.array(z.number().int().positive()).optional(),
           notes: z.string().max(500, 'Notes too long').optional().nullable(),
         })
       )
-      .min(1, 'At least one item is required'),
+      .min(1, 'At least one item is required')
+      .max(100),
   })
   .refine(
-    (data) => {
+    data => {
       return !!data.customer_id || !!data.customer;
     },
     {
@@ -61,7 +102,7 @@ export const createOrderSchema = z
     }
   )
   .refine(
-    (data) => {
+    data => {
       if (data.order_source === OrderSource.EVENT) {
         return !!data.event_id;
       }
@@ -73,7 +114,7 @@ export const createOrderSchema = z
     }
   )
   .refine(
-    (data) => {
+    data => {
       if (data.order_type === OrderType.DELIVERY) {
         return !!data.address_id || !!data.customer?.address;
       }
@@ -87,15 +128,18 @@ export const createOrderSchema = z
 
 export const updateOrderStatusSchema = z.object({
   status: z.nativeEnum(OrderStatus),
+  expected_status: z.nativeEnum(OrderStatus).optional(),
 });
-
 
 export const orderParamsSchema = z.object({
   id: z.string().regex(/^\d+$/, 'ID must be a number').transform(Number),
 });
 
 export const orderUserParamsSchema = z.object({
-  userId: z.string().regex(/^\d+$/, 'User ID must be a number').transform(Number),
+  userId: z
+    .string()
+    .regex(/^\d+$/, 'User ID must be a number')
+    .transform(Number),
 });
 
 const dateOrDateTime = z
@@ -131,8 +175,6 @@ export const orderCloseoutQuerySchema = z.object({
   vat_rate: z
     .string()
     .regex(/^\d+(\.\d+)?$/, 'vat_rate must be a number')
-    .transform((v) => parseFloat(v))
+    .transform(v => parseFloat(v))
     .optional(),
 });
-
-

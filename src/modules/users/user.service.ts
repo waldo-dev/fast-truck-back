@@ -1,7 +1,11 @@
 import bcrypt from 'bcrypt';
 import { AppError } from '../../shared/errors';
 import { Plan, UserBusiness } from '../../shared/database/models';
-import { BusinessStatus, SubscriptionStatus, UserRole } from '../../shared/database/models/enums';
+import {
+  BusinessStatus,
+  SubscriptionStatus,
+  UserRole,
+} from '../../shared/database/models/enums';
 import { businessRepository } from '../business/business.repository';
 import { subscriptionRepository } from '../subscriptions/subscription.repository';
 import { userRepository } from './user.repository';
@@ -39,7 +43,10 @@ type DemoAccountResponse = {
 };
 
 export class UserService {
-  private async getAllowedBusinessIds(userId: number, defaultBusinessId?: number | null) {
+  private async getAllowedBusinessIds(
+    userId: number,
+    defaultBusinessId?: number | null
+  ) {
     const ids = new Set<number>();
 
     if (defaultBusinessId) {
@@ -65,10 +72,16 @@ export class UserService {
     requester: { id: number; role: UserRole; businessId?: number | null }
   ) {
     if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(requester.role)) {
-      throw new AppError('Only ADMIN or BUSINESS_OWNER can access this resource', 403);
+      throw new AppError(
+        'Only ADMIN or BUSINESS_OWNER can access this resource',
+        403
+      );
     }
 
-    const allowedBusinessIds = await this.getAllowedBusinessIds(requester.id, requester.businessId);
+    const allowedBusinessIds = await this.getAllowedBusinessIds(
+      requester.id,
+      requester.businessId
+    );
 
     if (!allowedBusinessIds.includes(businessId)) {
       throw new AppError('Business not associated to this user', 403);
@@ -78,16 +91,34 @@ export class UserService {
     return users;
   }
 
-  public async getAdminsAndOwners(requester: { id: number; role: UserRole; businessId?: number | null }) {
+  public async getAdminsAndOwners(requester: {
+    id: number;
+    role: UserRole;
+    businessId?: number | null;
+  }) {
     if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(requester.role)) {
-      throw new AppError('Only ADMIN or BUSINESS_OWNER can access this resource', 403);
+      throw new AppError(
+        'Only ADMIN or BUSINESS_OWNER can access this resource',
+        403
+      );
     }
 
     // Aunque el endpoint pueda filtrar opcionalmente por business, ahora se retornan
     // todos los usuarios con roles permitidos (ADMIN, BUSINESS_OWNER, LOCAL_OPERATOR).
     // La autorización se maneja arriba por rol del solicitante.
     // Si se quisiera volver a limitar por negocio, se debería reintroducir el filtro aquí.
-    return userRepository.findAdminsAndOwners();
+    if (requester.role === UserRole.ADMIN)
+      return userRepository.findAdminsAndOwners();
+    const ids = await this.getAllowedBusinessIds(
+      requester.id,
+      requester.businessId
+    );
+    const lists = await Promise.all(
+      ids.map(id => userRepository.findAllByBusiness(id))
+    );
+    return Array.from(
+      new Map(lists.flat().map(user => [user.id, user])).values()
+    );
   }
 
   public async getAllUsers(businessId: number) {
@@ -117,8 +148,14 @@ export class UserService {
 
     const role = data.role || UserRole.LOCAL_OPERATOR;
 
-    if (requester.role === UserRole.BUSINESS_OWNER && role !== UserRole.LOCAL_OPERATOR) {
-      throw new AppError('BUSINESS_OWNER can only create LOCAL_OPERATOR users', 403);
+    if (
+      requester.role === UserRole.BUSINESS_OWNER &&
+      role !== UserRole.LOCAL_OPERATOR
+    ) {
+      throw new AppError(
+        'BUSINESS_OWNER can only create LOCAL_OPERATOR users',
+        403
+      );
     }
 
     const allowedBusinessIds =
@@ -132,13 +169,21 @@ export class UserService {
         : allowedBusinessIds;
 
     if (!targetBusinessIds || targetBusinessIds.length === 0) {
-      throw new AppError('At least one business is required to create a user', 400);
+      throw new AppError(
+        'At least one business is required to create a user',
+        400
+      );
     }
 
     if (requester.role !== UserRole.ADMIN && allowedBusinessIds) {
-      const unauthorized = targetBusinessIds.filter((id) => !allowedBusinessIds.includes(id));
+      const unauthorized = targetBusinessIds.filter(
+        id => !allowedBusinessIds.includes(id)
+      );
       if (unauthorized.length > 0) {
-        throw new AppError(`Business not associated to this user: ${unauthorized.join(',')}`, 403);
+        throw new AppError(
+          `Business not associated to this user: ${unauthorized.join(',')}`,
+          403
+        );
       }
     }
 
@@ -253,7 +298,8 @@ export class UserService {
     trialEnds.setDate(trialEnds.getDate() + 30);
 
     const proPlan = await Plan.findOne({ where: { name: 'Pro' } });
-    const fallbackPlan = proPlan || (await Plan.findOne({ order: [['id', 'ASC']] }));
+    const fallbackPlan =
+      proPlan || (await Plan.findOne({ order: [['id', 'ASC']] }));
 
     if (!fallbackPlan) {
       throw new AppError('No hay planes disponibles para cuentas demo', 500);
@@ -286,8 +332,15 @@ export class UserService {
     }
 
     // No permitir que OWNER escale roles a ADMIN/OWNER
-    if (requester.role !== UserRole.ADMIN && data.role && data.role !== UserRole.LOCAL_OPERATOR) {
-      throw new AppError('Only ADMIN can change role to ADMIN or BUSINESS_OWNER', 403);
+    if (
+      requester.role !== UserRole.ADMIN &&
+      data.role &&
+      data.role !== UserRole.LOCAL_OPERATOR
+    ) {
+      throw new AppError(
+        'Only ADMIN can change role to ADMIN or BUSINESS_OWNER',
+        403
+      );
     }
 
     let targetBusinessIds: number[] | undefined;
@@ -296,7 +349,10 @@ export class UserService {
       const allowedBusinessIds =
         requester.role === UserRole.ADMIN
           ? undefined
-          : await this.getAllowedBusinessIds(requester.id, requester.businessId);
+          : await this.getAllowedBusinessIds(
+              requester.id,
+              requester.businessId
+            );
 
       targetBusinessIds = Array.from(new Set(businessIds));
       if (targetBusinessIds.length === 0) {
@@ -304,9 +360,14 @@ export class UserService {
       }
 
       if (requester.role !== UserRole.ADMIN && allowedBusinessIds) {
-        const unauthorized = targetBusinessIds.filter((id) => !allowedBusinessIds.includes(id));
+        const unauthorized = targetBusinessIds.filter(
+          id => !allowedBusinessIds.includes(id)
+        );
         if (unauthorized.length > 0) {
-          throw new AppError(`Business not associated to this user: ${unauthorized.join(',')}`, 403);
+          throw new AppError(
+            `Business not associated to this user: ${unauthorized.join(',')}`,
+            403
+          );
         }
       }
     }
@@ -315,7 +376,9 @@ export class UserService {
       id,
       {
         ...data,
-        ...(targetBusinessIds && targetBusinessIds.length > 0 ? { business_id: targetBusinessIds[0] } : {}),
+        ...(targetBusinessIds && targetBusinessIds.length > 0
+          ? { business_id: targetBusinessIds[0] }
+          : {}),
       },
       businessId
     );
@@ -327,7 +390,11 @@ export class UserService {
     return user;
   }
 
-  public async deactivateUser(id: number, businessId: number, userRole: UserRole) {
+  public async deactivateUser(
+    id: number,
+    businessId: number,
+    userRole: UserRole
+  ) {
     // Solo ADMIN puede desactivar usuarios
     if (userRole !== UserRole.ADMIN) {
       throw new AppError('Only ADMIN can deactivate users', 403);
@@ -343,7 +410,10 @@ export class UserService {
     requester: { id: number; role: UserRole; businessId?: number | null }
   ) {
     if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(requester.role)) {
-      throw new AppError('Only ADMIN or BUSINESS_OWNER can update passwords', 403);
+      throw new AppError(
+        'Only ADMIN or BUSINESS_OWNER can update passwords',
+        403
+      );
     }
 
     const allowedBusinessIds =
@@ -354,7 +424,9 @@ export class UserService {
     const { businessIds } = await userRepository.getUserWithBusinessIds(id);
 
     if (requester.role !== UserRole.ADMIN && allowedBusinessIds) {
-      const hasAccess = businessIds.some((businessId) => allowedBusinessIds.includes(businessId));
+      const hasAccess = businessIds.some(businessId =>
+        allowedBusinessIds.includes(businessId)
+      );
       if (!hasAccess) {
         throw new AppError('Business not associated to this user', 403);
       }
@@ -388,13 +460,16 @@ export class UserService {
     requester: { id: number; role: UserRole; businessId?: number | null }
   ) {
     const isSelf = requester.id === targetUserId;
-    const isAdminOrOwner = [UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(requester.role);
+    const isAdminOrOwner = [UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(
+      requester.role
+    );
 
     if (!isSelf && !isAdminOrOwner) {
       throw new AppError('Not authorized to view users for this user', 403);
     }
 
-    const { businessIds } = await userRepository.getUserWithBusinessIds(targetUserId);
+    const { businessIds } =
+      await userRepository.getUserWithBusinessIds(targetUserId);
 
     if (businessIds.length === 0) {
       return [];
@@ -411,5 +486,3 @@ export class UserService {
 }
 
 export const userService = new UserService();
-
-

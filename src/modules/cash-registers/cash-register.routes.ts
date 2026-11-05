@@ -1,7 +1,14 @@
 import { Router } from 'express';
-import { authenticate, authorize, validate, validateQuery } from '../../shared/middlewares';
+import {
+  authenticate,
+  authorize,
+  validate,
+  validateQuery,
+} from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { cashRegisterController } from './cash-register.controller';
+import { CashRegister } from '../../shared/database/models';
+import { protectResource } from '../../shared/middlewares/businessAccess';
 import {
   openRegisterSchema,
   closeRegisterSchema,
@@ -11,7 +18,11 @@ import {
 
 const router = Router();
 
-router.use(authenticate);
+router.use('/cash-registers', authenticate);
+router.param(
+  'id',
+  protectResource(async id => (await CashRegister.findByPk(id))?.business_id)
+);
 
 // Abrir caja
 router.post(
@@ -67,8 +78,3 @@ router.get(
 );
 
 export default router;
-
-
-
-
-

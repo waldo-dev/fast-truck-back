@@ -14,6 +14,8 @@ interface OrderAttributes {
   status: OrderStatus;
   total: number;
   code: string | null;
+  request_key?: string | null;
+  request_hash?: string | null;
   created_at: Date;
   confirmed_at: Date | null;
   ready_at: Date | null;
@@ -23,26 +25,28 @@ interface OrderAttributes {
   is_new_customer: boolean | null;
 }
 
-interface OrderCreationAttributes
-  extends Optional<
-    OrderAttributes,
-    | 'id'
-    | 'business_id'
-    | 'customer_id'
-    | 'address_id'
-    | 'event_id'
-    | 'payment_type'
-    | 'status'
-    | 'created_at'
-    | 'confirmed_at'
-    | 'ready_at'
-    | 'delivered_at'
-    | 'preparing_at'
-    | 'cancelled_at'
-    | 'is_new_customer'
-  > {}
+interface OrderCreationAttributes extends Optional<
+  OrderAttributes,
+  | 'id'
+  | 'business_id'
+  | 'customer_id'
+  | 'address_id'
+  | 'event_id'
+  | 'payment_type'
+  | 'status'
+  | 'created_at'
+  | 'confirmed_at'
+  | 'ready_at'
+  | 'delivered_at'
+  | 'preparing_at'
+  | 'cancelled_at'
+  | 'is_new_customer'
+> {}
 
-export class Order extends Model<OrderAttributes, OrderCreationAttributes> implements OrderAttributes {
+export class Order
+  extends Model<OrderAttributes, OrderCreationAttributes>
+  implements OrderAttributes
+{
   public id!: number;
   public business_id!: number | null;
   public customer_id!: number | null;
@@ -54,6 +58,8 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
   public status!: OrderStatus;
   public total!: number;
   public code!: string | null;
+  public request_key!: string | null;
+  public request_hash!: string | null;
   public created_at!: Date;
   public confirmed_at!: Date | null;
   public ready_at!: Date | null;
@@ -65,6 +71,8 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
 
 Order.init(
   {
+    request_key: { type: DataTypes.STRING(100), allowNull: true },
+    request_hash: { type: DataTypes.STRING(64), allowNull: true },
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
@@ -164,5 +172,3 @@ Order.init(
     timestamps: false,
   }
 );
-
-

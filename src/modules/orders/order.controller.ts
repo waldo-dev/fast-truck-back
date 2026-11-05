@@ -1,10 +1,18 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../shared/middlewares';
-import { UserRole, OrderStatus, OrderSource } from '../../shared/database/models/enums';
+import {
+  UserRole,
+  OrderStatus,
+  OrderSource,
+} from '../../shared/database/models/enums';
 import { orderService } from './order.service';
 
 export class OrderController {
-  public getByUserBusinesses = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getByUserBusinesses = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(403).json({
@@ -29,7 +37,7 @@ export class OrderController {
       }
 
       const isSelf = req.user.id === userId;
-      const isAdminOrOwner = [UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(req.user.role as UserRole);
+      const isAdminOrOwner = req.user.role === UserRole.ADMIN;
 
       if (!isSelf && !isAdminOrOwner) {
         res.status(403).json({
@@ -41,7 +49,8 @@ export class OrderController {
         return;
       }
 
-      const ordersByBusiness = await orderService.getOrdersByUserBusinesses(userId);
+      const ordersByBusiness =
+        await orderService.getOrdersByUserBusinesses(userId);
 
       res.status(200).json({
         success: true,
@@ -52,7 +61,11 @@ export class OrderController {
     }
   };
 
-  public getByUserBusinessesCsv = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getByUserBusinessesCsv = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(403).json({
@@ -77,7 +90,7 @@ export class OrderController {
       }
 
       const isSelf = req.user.id === userId;
-      const isAdminOrOwner = [UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(req.user.role as UserRole);
+      const isAdminOrOwner = req.user.role === UserRole.ADMIN;
 
       if (!isSelf && !isAdminOrOwner) {
         res.status(403).json({
@@ -89,9 +102,10 @@ export class OrderController {
         return;
       }
 
-      const ordersByBusiness = await orderService.getOrdersByUserBusinesses(userId);
+      const ordersByBusiness =
+        await orderService.getOrdersByUserBusinesses(userId);
 
-      const rows = ordersByBusiness.flatMap((group) =>
+      const rows = ordersByBusiness.flatMap(group =>
         group.orders.map((order: any) => ({
           business_id: group.business_id,
           order_id: order.id,
@@ -128,7 +142,11 @@ export class OrderController {
       const escapeCsv = (value: any) => {
         if (value === null || value === undefined) return '';
         const stringValue = String(value);
-        if (stringValue.includes('"') || stringValue.includes(';') || stringValue.includes('\n')) {
+        if (
+          stringValue.includes('"') ||
+          stringValue.includes(';') ||
+          stringValue.includes('\n')
+        ) {
           return `"${stringValue.replace(/"/g, '""')}"`;
         }
         return stringValue;
@@ -136,20 +154,29 @@ export class OrderController {
 
       const csvLines = [
         headers.join(';'),
-        ...rows.map((row) => headers.map((h) => escapeCsv((row as any)[h])).join(';')),
+        ...rows.map(row =>
+          headers.map(h => escapeCsv((row as any)[h])).join(';')
+        ),
       ];
 
       const csv = csvLines.join('\n');
 
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="orders_user_${userId}.csv"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="orders_user_${userId}.csv"`
+      );
       res.status(200).send(csv);
     } catch (error) {
       next(error);
     }
   };
 
-  public getHistory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getHistory = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(403).json({
@@ -161,7 +188,11 @@ export class OrderController {
         return;
       }
 
-      const allowedRoles = [UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR];
+      const allowedRoles = [
+        UserRole.ADMIN,
+        UserRole.BUSINESS_OWNER,
+        UserRole.LOCAL_OPERATOR,
+      ];
       if (!allowedRoles.includes(req.user.role as UserRole)) {
         res.status(403).json({
           success: false,
@@ -172,7 +203,15 @@ export class OrderController {
         return;
       }
 
-      const { start_date, end_date, status, order_source, customer_id, event_id, business_id } = req.query as {
+      const {
+        start_date,
+        end_date,
+        status,
+        order_source,
+        customer_id,
+        event_id,
+        business_id,
+      } = req.query as {
         start_date?: string;
         end_date?: string;
         status?: OrderStatus;
@@ -182,7 +221,10 @@ export class OrderController {
         business_id?: string;
       };
 
-      const parseBoundary = (value?: string, isStart?: boolean): Date | undefined => {
+      const parseBoundary = (
+        value?: string,
+        isStart?: boolean
+      ): Date | undefined => {
         if (!value) return undefined;
         const date = new Date(value);
         if (isNaN(date.getTime())) return undefined;
@@ -228,7 +270,9 @@ export class OrderController {
         filters.event_id = parseInt(event_id, 10);
       }
 
-      const requestedBusinessId = business_id ? parseInt(business_id, 10) : undefined;
+      const requestedBusinessId = business_id
+        ? parseInt(business_id, 10)
+        : undefined;
       const businessId = requestedBusinessId ?? req.business_id;
 
       if (!businessId || isNaN(businessId)) {
@@ -243,7 +287,8 @@ export class OrderController {
 
       const orders = await orderService.getHistory(businessId, filters);
       const ordersWithFlag = orders.map((order: any) => {
-        const plain = typeof order.toJSON === 'function' ? order.toJSON() : order;
+        const plain =
+          typeof order.toJSON === 'function' ? order.toJSON() : order;
         return {
           ...plain,
           has_event: Boolean(plain.event_id),
@@ -259,7 +304,11 @@ export class OrderController {
     }
   };
 
-  public getCloseout = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getCloseout = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id || !req.user) {
         res.status(403).json({
@@ -271,7 +320,11 @@ export class OrderController {
         return;
       }
 
-      const allowedRoles = [UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR];
+      const allowedRoles = [
+        UserRole.ADMIN,
+        UserRole.BUSINESS_OWNER,
+        UserRole.LOCAL_OPERATOR,
+      ];
       if (!allowedRoles.includes(req.user.role as UserRole)) {
         res.status(403).json({
           success: false,
@@ -282,15 +335,18 @@ export class OrderController {
         return;
       }
 
-      const { start_date, end_date, vat_rate, business_id, event_id } = req.query as {
-        start_date?: string;
-        end_date?: string;
-        vat_rate?: string | number;
-        business_id?: string;
-        event_id?: string;
-      };
+      const { start_date, end_date, vat_rate, business_id, event_id } =
+        req.query as {
+          start_date?: string;
+          end_date?: string;
+          vat_rate?: string | number;
+          business_id?: string;
+          event_id?: string;
+        };
 
-      const businessIdNum = business_id ? parseInt(business_id, 10) : req.business_id;
+      const businessIdNum = business_id
+        ? parseInt(business_id, 10)
+        : req.business_id;
       if (!businessIdNum || Number.isNaN(businessIdNum)) {
         res.status(400).json({
           success: false,
@@ -299,7 +355,10 @@ export class OrderController {
         return;
       }
 
-      const parseBoundary = (value?: string, isStart?: boolean): Date | undefined => {
+      const parseBoundary = (
+        value?: string,
+        isStart?: boolean
+      ): Date | undefined => {
         if (!value) return undefined;
         const date = new Date(value);
         if (isNaN(date.getTime())) return undefined;
@@ -330,7 +389,8 @@ export class OrderController {
         filters.endDate = parsedEnd;
       }
       if (vat_rate !== undefined) {
-        const rate = typeof vat_rate === 'string' ? parseFloat(vat_rate) : vat_rate;
+        const rate =
+          typeof vat_rate === 'string' ? parseFloat(vat_rate) : vat_rate;
         if (!isNaN(rate)) {
           filters.vatRate = rate;
         }
@@ -353,9 +413,15 @@ export class OrderController {
     }
   };
 
-  public getAll = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getAll = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
-      const requestedBusinessId = req.query.business_id ? parseInt(req.query.business_id as string, 10) : undefined;
+      const requestedBusinessId = req.query.business_id
+        ? parseInt(req.query.business_id as string, 10)
+        : undefined;
       const businessId = requestedBusinessId ?? req.business_id;
 
       if (!businessId || isNaN(businessId)) {
@@ -370,10 +436,19 @@ export class OrderController {
 
       const status = req.query.status as OrderStatus | undefined;
       const order_source = req.query.order_source as OrderSource | undefined;
-      const customer_id = req.query.customer_id ? parseInt(req.query.customer_id as string, 10) : undefined;
-      const event_id = req.query.event_id ? parseInt(req.query.event_id as string, 10) : undefined;
+      const customer_id = req.query.customer_id
+        ? parseInt(req.query.customer_id as string, 10)
+        : undefined;
+      const event_id = req.query.event_id
+        ? parseInt(req.query.event_id as string, 10)
+        : undefined;
 
-      const filters: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number; event_id?: number } = {};
+      const filters: {
+        status?: OrderStatus;
+        order_source?: OrderSource;
+        customer_id?: number;
+        event_id?: number;
+      } = {};
       if (status && Object.values(OrderStatus).includes(status)) {
         filters.status = status;
       }
@@ -398,7 +473,11 @@ export class OrderController {
     }
   };
 
-  public getById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getById = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const id = parseInt(req.params.id, 10);
 
@@ -423,7 +502,11 @@ export class OrderController {
     }
   };
 
-  public create = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public create = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(403).json({
@@ -457,20 +540,21 @@ export class OrderController {
         return;
       }
 
-      const order = await orderService.createOrder(
-        {
-          business_id: businessIdNum,
-          customer_id,
-          customer,
-          address_id,
-          event_id,
-          payment_method,
-          order_source,
-          order_type,
-          status,
-          items,
-        },
-      );
+      const order = await orderService.createOrder({
+        business_id: businessIdNum,
+        request_key: req.body.request_key,
+        cash_register_id: req.body.cash_register_id,
+        payment_received: req.body.payment_received === true,
+        customer_id,
+        customer,
+        address_id,
+        event_id,
+        payment_method,
+        order_source,
+        order_type,
+        status,
+        items,
+      });
 
       res.status(201).json({
         success: true,
@@ -481,7 +565,11 @@ export class OrderController {
     }
   };
 
-  public updateStatus = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public updateStatus = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id || !req.user) {
         res.status(403).json({
@@ -517,7 +605,12 @@ export class OrderController {
         return;
       }
 
-      const order = await orderService.updateOrderStatus(id, status, req.user.role as UserRole);
+      const order = await orderService.updateOrderStatus(
+        id,
+        status,
+        req.user.role as UserRole,
+        req.body.expected_status
+      );
 
       res.status(200).json({
         success: true,
@@ -528,7 +621,11 @@ export class OrderController {
     }
   };
 
-  public delete = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public delete = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id || !req.user) {
         res.status(403).json({
@@ -565,5 +662,3 @@ export class OrderController {
 }
 
 export const orderController = new OrderController();
-
-

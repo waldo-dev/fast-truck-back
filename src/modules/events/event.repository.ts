@@ -1,4 +1,5 @@
-import { Op, fn, col, literal } from 'sequelize';
+import { calculateEventResult } from '../orders/order.integrity';
+import { Op } from 'sequelize';
 import {
   Event,
   Location,
@@ -11,10 +12,17 @@ import {
   EventExpense,
 } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
-import { OrderStatus, PaymentMethod, PaymentStatus } from '../../shared/database/models/enums';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '../../shared/database/models/enums';
 
 export class EventRepository {
-  public async findAll(businessId: number, filters?: { future_only?: boolean; is_active?: boolean }) {
+  public async findAll(
+    businessId: number,
+    filters?: { future_only?: boolean; is_active?: boolean }
+  ) {
     const where: any = {
       business_id: businessId,
     };
@@ -135,13 +143,14 @@ export class EventRepository {
     // Para DATEONLY no convertir a Date; guardar la cadena YYYY-MM-DD tal cual
     const eventPayload = {
       ...data,
-      event_date: data.event_date === null ? null : data.event_date ?? undefined,
+      event_date:
+        data.event_date === null ? null : (data.event_date ?? undefined),
     };
 
     const event = await Event.create(eventPayload);
 
     if (uniqueProductIds.length > 0) {
-      const rows = uniqueProductIds.map((pid) => ({
+      const rows = uniqueProductIds.map(pid => ({
         event_id: event.id,
         product_id: pid,
         active: true,
@@ -150,7 +159,7 @@ export class EventRepository {
     }
 
     if (data.organizers && data.organizers.length > 0) {
-      const orgRows = data.organizers.map((org) => ({
+      const orgRows = data.organizers.map(org => ({
         event_id: event.id,
         name: org.name,
         role: org.role ?? null,
@@ -166,7 +175,7 @@ export class EventRepository {
 
   public async getSummary(eventId: number, businessId: number) {
     const event = await Event.findOne({
-      where: { id: eventId },
+      where: { id: eventId, business_id: businessId },
       include: [
         {
           model: Location,
@@ -186,7 +195,13 @@ export class EventRepository {
         {
           model: OrderItem,
           as: 'items',
-          attributes: ['product_id', 'quantity', 'unit_price'],
+          attributes: [
+            'product_id',
+            'quantity',
+            'unit_price',
+            'line_total',
+            'cost',
+          ],
           include: [
             {
               model: Product,
@@ -203,9 +218,12 @@ export class EventRepository {
       ],
     });
 
-    const validOrders = orders.filter((o) => o.status !== OrderStatus.CANCELLED);
+    const validOrders = orders.filter(o => o.status !== OrderStatus.CANCELLED);
     const tickets = validOrders.length;
-    const totalSales = validOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const totalSales = validOrders.reduce(
+      (sum, o) => sum + Number(o.total || 0),
+      0
+    );
     const avgTicket = tickets > 0 ? totalSales / tickets : 0;
 
     const paymentBreakdown: Record<string, number> = {
@@ -222,13 +240,11 @@ export class EventRepository {
       const payments = (order as any).payments as Array<Payment> | undefined;
       if (payments && payments.length > 0) {
         for (const payment of payments) {
-          if (payment.payment_status === PaymentStatus.FAILED) continue;
+          if (payment.payment_status !== PaymentStatus.PAID) continue;
           const method = payment.payment_method || 'OTHER';
-          paymentBreakdown[method] = (paymentBreakdown[method] || 0) + Number(payment.amount || 0);
+          paymentBreakdown[method] =
+            (paymentBreakdown[method] || 0) + Number(payment.amount || 0);
         }
-      } else if ((order as any).payment_type) {
-        const method = (order as any).payment_type || 'OTHER';
-        paymentBreakdown[method] = (paymentBreakdown[method] || 0) + Number(order.total || 0);
       }
     }
 
@@ -244,16 +260,26 @@ export class EventRepository {
         const pid = item.product_id;
         if (!pid) continue;
         const name = (item as any).product?.name || 'Sin nombre';
-        const revenue = Number(item.unit_price || 0) * Number(item.quantity || 0);
+        const revenue = Number(
+          item.line_total ??
+            Number(item.unit_price || 0) * Number(item.quantity || 0)
+        );
         if (!productStats[pid]) {
-          productStats[pid] = { product_id: pid, name, quantity: 0, revenue: 0 };
+          productStats[pid] = {
+            product_id: pid,
+            name,
+            quantity: 0,
+            revenue: 0,
+          };
         }
         productStats[pid].quantity += Number(item.quantity || 0);
         productStats[pid].revenue += revenue;
       }
     }
 
-    const topProducts = Object.values(productStats).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+    const topProducts = Object.values(productStats)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
 
     const expensesRows = await EventExpense.findAll({
       where: { event_id: eventId },
@@ -261,9 +287,23 @@ export class EventRepository {
       order: [['created_at', 'DESC']],
     });
 
-    const expensesTotal = expensesRows.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-    const margin = totalSales - expensesTotal;
-    const marginPct = totalSales > 0 ? margin / totalSales : 0;
+    const expensesTotal = expensesRows.reduce(
+      (sum, e) => sum + Number(e.amount || 0),
+      0
+    );
+    // Prepared cancellations remain a cost (waste); legacy lines without a price snapshot are incomplete.
+    const costOrders = orders.filter(
+      order => order.status !== OrderStatus.CANCELLED || !!order.preparing_at
+    );
+    const result = calculateEventResult(
+      totalSales,
+      expensesTotal,
+      costOrders.flatMap(order =>
+        ((order as any).items ?? []).map((item: OrderItem) => ({
+          cost: item.line_total == null ? null : item.cost,
+        }))
+      )
+    );
 
     return {
       event,
@@ -276,86 +316,35 @@ export class EventRepository {
         total: expensesTotal,
         items: expensesRows,
       },
-      margin,
-      margin_pct: marginPct,
+      ...result,
     };
   }
 
   public async getAnalytics(businessId: number, limit: number = 10) {
-    console.log("🚀 ~ EventRepository ~ getAnalytics ~ businessId:", businessId)
-    const salesRows = await Order.findAll({
-      where: {
-        event_id: { [Op.ne]: null },
-      },
-      attributes: [
-        'event_id',
-        [
-          fn(
-            'SUM',
-            literal(`CASE WHEN status <> '${OrderStatus.CANCELLED}' THEN total ELSE 0 END`)
-          ),
-          'sales',
-        ],
-        [
-          fn(
-            'SUM',
-            literal(`CASE WHEN status <> '${OrderStatus.CANCELLED}' THEN 1 ELSE 0 END`)
-          ),
-          'tickets',
-        ],
-      ],
-      group: ['event_id'],
-      having: literal('event_id IS NOT NULL'),
-    });
-
-    const eventIds = salesRows
-      .map((row) => row.get('event_id') as number | null)
-      .filter((id): id is number => !!id);
-
-    const expenseRows = await EventExpense.findAll({
-      where: { event_id: { [Op.in]: eventIds } },
-      attributes: ['event_id', [fn('SUM', col('amount')), 'expenses']],
-      group: ['event_id'],
-    });
-
-    const expenseMap = expenseRows.reduce<Record<number, number>>((acc, row) => {
-      const eid = (row.get('event_id') as number) || 0;
-      const exp = Number(row.get('expenses') as any) || 0;
-      acc[eid] = exp;
-      return acc;
-    }, {});
-
     const events = await Event.findAll({
-      where: { id: { [Op.in]: eventIds }, business_id: businessId },
-      attributes: ['id', 'name', 'event_date', 'event_type'],
+      where: { business_id: businessId },
       order: [['event_date', 'DESC']],
+      limit: Math.min(Math.max(limit, 1), 100),
     });
-
-    const analytics = salesRows
-      .map((row) => {
-        const eventId = row.get('event_id') as number;
-        const sales = Number(row.get('sales') as any) || 0;
-        const tickets = Number(row.get('tickets') as any) || 0;
-        const expenses = expenseMap[eventId] || 0;
-        const margin = sales - expenses;
-        const marginPct = sales > 0 ? margin / sales : 0;
-        const eventInfo = events.find((e) => e.id === eventId);
+    const summaries = await Promise.all(
+      events.map(async event => {
+        const summary = await this.getSummary(event.id, businessId);
         return {
-          event_id: eventId,
-          name: eventInfo?.name || 'Evento',
-          event_date: eventInfo?.event_date || null,
-          event_type: eventInfo?.event_type || null,
-          sales,
-          tickets,
-          expenses,
-          margin,
-          margin_pct: marginPct,
+          event_id: event.id,
+          name: event.name,
+          event_date: event.event_date,
+          event_type: event.event_type,
+          sales: summary.sales,
+          tickets: summary.tickets,
+          expenses: summary.expenses.total,
+          ingredient_cost: summary.ingredient_cost,
+          cost_coverage_complete: summary.cost_coverage_complete,
+          margin: summary.margin,
+          margin_pct: summary.margin_pct,
         };
       })
-      .sort((a, b) => b.sales - a.sales)
-      .slice(0, limit);
-
-    return analytics;
+    );
+    return summaries.sort((a, b) => b.sales - a.sales);
   }
 
   public async addExpense(data: {
@@ -366,7 +355,7 @@ export class EventRepository {
     amount: number;
   }) {
     const event = await Event.findOne({
-      where: { id: data.event_id },
+      where: { id: data.event_id, business_id: data.business_id },
     });
 
     if (!event) {
@@ -383,9 +372,9 @@ export class EventRepository {
     return expense;
   }
 
-  public async listExpenses(eventId: number) {
+  public async listExpenses(eventId: number, businessId: number) {
     const event = await Event.findOne({
-      where: { id: eventId },
+      where: { id: eventId, business_id: businessId },
     });
 
     if (!event) {
@@ -398,7 +387,11 @@ export class EventRepository {
     });
   }
 
-  public async deleteExpense(eventId: number, expenseId: number, businessId: number) {
+  public async deleteExpense(
+    eventId: number,
+    expenseId: number,
+    businessId: number
+  ) {
     const expense = await EventExpense.findOne({
       where: { id: expenseId, event_id: eventId },
       include: [
@@ -424,5 +417,3 @@ export class EventRepository {
 }
 
 export const eventRepository = new EventRepository();
-
-

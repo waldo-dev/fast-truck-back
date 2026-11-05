@@ -7,13 +7,19 @@ import {
 } from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { eventController } from './event.controller';
-import { createEventSchema} from './event.schemas';
+import { createEventSchema } from './event.schemas';
+import { Event } from '../../shared/database/models';
+import { protectResource } from '../../shared/middlewares/businessAccess';
 
 const router = Router();
 
 // Todas las rutas requieren autenticación y business_id
 router.use(authenticate);
 router.use(injectBusinessId);
+router.param(
+  'id',
+  protectResource(async id => (await Event.findByPk(id))?.business_id)
+);
 
 // GET /events - Listar eventos (ADMIN y LOCAL_OPERATOR pueden leer)
 // Query param: future=true para solo eventos futuros
@@ -50,5 +56,3 @@ router.post(
 );
 
 export default router;
-
-

@@ -1,3 +1,5 @@
+import jwt from 'jsonwebtoken';
+import { env } from '../../config/env';
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors';
 import { Customer } from '../database/models';
@@ -27,23 +29,18 @@ export const authenticateCustomer = async (
       throw new AppError('Session token required', 401);
     }
 
-    // Por ahora, usamos un sistema simple: el token contiene el customer_id
-    // En producción, deberías usar un sistema más robusto (Redis, JWT, etc.)
-    // Por simplicidad, asumimos que el token es el customer_id (esto es temporal)
-    // TODO: Implementar verificación real del token
-
-    // Por ahora, requerimos que el customer_id venga en el header también
-    const customerId = parseInt(req.headers['x-customer-id'] as string, 10);
-
-    if (!customerId || isNaN(customerId)) {
-      throw new AppError('Invalid customer ID', 401);
-    }
+    const claims = jwt.verify(sessionToken, env.JWT_SECRET, {
+      audience: 'operfoods-customer',
+    }) as { sub?: string; business_id?: number };
+    const customerId = Number(claims.sub);
+    if (!Number.isSafeInteger(customerId) || customerId <= 0)
+      throw new AppError('Invalid customer session', 401);
 
     const customer = await Customer.findByPk(customerId, {
       attributes: ['id', 'phone', 'business_id'],
     });
 
-    if (!customer) {
+    if (!customer || customer.business_id !== claims.business_id) {
       throw new AppError('Customer not found', 401);
     }
 
@@ -59,8 +56,10 @@ export const authenticateCustomer = async (
 
     next();
   } catch (error) {
-    next(error);
+    next(
+      error instanceof jwt.JsonWebTokenError
+        ? new AppError('Invalid customer session', 401)
+        : error
+    );
   }
 };
-
-

@@ -1,11 +1,18 @@
 import { AppError } from '../../shared/errors';
-import { UserRole, SubscriptionStatus, PaymentStatus } from '../../shared/database/models/enums';
+import {
+  UserRole,
+  SubscriptionStatus,
+  PaymentStatus,
+} from '../../shared/database/models/enums';
 import { subscriptionRepository } from './subscription.repository';
 
 export class SubscriptionService {
   private ensureWriteAccess(userRole: UserRole) {
-    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
-      throw new AppError('Only ADMIN or BUSINESS_OWNER can modify subscriptions', 403);
+    if (userRole !== UserRole.ADMIN) {
+      throw new AppError(
+        'Only ADMIN or BUSINESS_OWNER can modify subscriptions',
+        403
+      );
     }
   }
 
@@ -37,7 +44,9 @@ export class SubscriptionService {
   ) {
     this.ensureWriteAccess(userRole);
     const now = new Date();
-    const start = data.current_period_start ? new Date(data.current_period_start) : now;
+    const start = data.current_period_start
+      ? new Date(data.current_period_start)
+      : now;
     const end = data.current_period_end
       ? new Date(data.current_period_end)
       : (() => {
@@ -79,7 +88,9 @@ export class SubscriptionService {
     userRole: UserRole
   ) {
     this.ensureWriteAccess(userRole);
-    const start = data.current_period_start ? new Date(data.current_period_start) : undefined;
+    const start = data.current_period_start
+      ? new Date(data.current_period_start)
+      : undefined;
     const end = data.current_period_end
       ? new Date(data.current_period_end)
       : undefined;
@@ -120,5 +131,3 @@ export class SubscriptionService {
 }
 
 export const subscriptionService = new SubscriptionService();
-
-

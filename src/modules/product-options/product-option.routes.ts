@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate, validateParams } from '../../shared/middlewares';
+import {
+  authenticate,
+  authorize,
+  injectBusinessId,
+  validate,
+  validateParams,
+} from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { productOptionController } from './product-option.controller';
 import {
@@ -12,8 +18,7 @@ import {
 const router = Router();
 
 // Todas las rutas requieren autenticación y business_id
-router.use(authenticate);
-router.use(injectBusinessId);
+router.use(['/products', '/product-options'], authenticate, injectBusinessId);
 
 // POST /products/:id/options - Agregar opción a producto (solo ADMIN)
 router.post(
@@ -42,5 +47,3 @@ router.delete(
 );
 
 export default router;
-
-

@@ -1,5 +1,13 @@
+import { Promotion } from '../../shared/database/models';
+import { protectResource } from '../../shared/middlewares/businessAccess';
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate, validateParams } from '../../shared/middlewares';
+import {
+  authenticate,
+  authorize,
+  injectBusinessId,
+  validate,
+  validateParams,
+} from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { promotionController } from './promotion.controller';
 import {
@@ -15,6 +23,10 @@ const router = Router();
 
 // Todas las rutas requieren autenticación y business_id
 router.use(authenticate);
+router.param(
+  'id',
+  protectResource(async id => (await Promotion.findByPk(id))?.business_id)
+);
 router.use(injectBusinessId);
 
 // GET /promotions/by-business?business_ids=1,2 - Admin/Owner/Operator
@@ -26,7 +38,11 @@ router.get(
 
 // GET /promotions - Listar promociones (ADMIN, BUSINESS_OWNER, LOCAL_OPERATOR)
 // Query params: active (true/false)
-router.get('/', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR), promotionController.getAll);
+router.get(
+  '/',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
+  promotionController.getAll
+);
 
 // GET /promotions/:id - Obtener promoción por ID (ADMIN, BUSINESS_OWNER, LOCAL_OPERATOR)
 router.get(
@@ -89,4 +105,3 @@ router.delete(
 );
 
 export default router;
-

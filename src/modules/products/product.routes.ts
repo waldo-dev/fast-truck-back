@@ -1,3 +1,5 @@
+import { Product } from '../../shared/database/models';
+import { protectResource } from '../../shared/middlewares/businessAccess';
 import { Router } from 'express';
 import multer from 'multer';
 import {
@@ -23,6 +25,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Todas las rutas requieren autenticación
 router.use(authenticate);
+router.param(
+  'id',
+  protectResource(async id => (await Product.findByPk(id))?.business_id)
+);
 
 // Rutas para BUSINESS_OWNER con múltiples negocios (sin business_id inyectado)
 router.get(
@@ -57,7 +63,11 @@ router.use(injectBusinessId);
 
 // GET /products - Listar productos (ADMIN y LOCAL_OPERATOR pueden leer)
 // Query params: category_id, status
-router.get('/', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR), productController.getAll);
+router.get(
+  '/',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
+  productController.getAll
+);
 
 // GET /products/:id - Obtener producto por ID (ADMIN y LOCAL_OPERATOR pueden leer)
 router.get(

@@ -1,10 +1,15 @@
-import { Op } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import { Customer, CustomerAddress, Order } from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 
 export class CustomerRepository {
-  public async findByPhone(phone: string, businessId: number) {
+  public async findByPhone(
+    phone: string,
+    businessId: number,
+    transaction?: Transaction
+  ) {
     const customer = await Customer.findOne({
+      transaction,
       where: {
         phone,
         business_id: businessId,
@@ -14,8 +19,13 @@ export class CustomerRepository {
     return customer;
   }
 
-  public async findById(id: number, businessId: number) {
+  public async findById(
+    id: number,
+    businessId: number,
+    transaction?: Transaction
+  ) {
     const customer = await Customer.findOne({
+      transaction,
       where: {
         id,
         business_id: businessId,
@@ -49,7 +59,15 @@ export class CustomerRepository {
         {
           model: Order,
           as: 'orders',
-          attributes: ['id', 'business_id', 'order_source', 'order_type', 'status', 'total', 'created_at'],
+          attributes: [
+            'id',
+            'business_id',
+            'order_source',
+            'order_type',
+            'status',
+            'total',
+            'created_at',
+          ],
           order: [['created_at', 'DESC']],
         },
       ],
@@ -59,13 +77,16 @@ export class CustomerRepository {
     return customers;
   }
 
-  public async create(data: {
-    business_id: number;
-    name: string;
-    phone: string;
-    notes?: string | null;
-  }) {
-    const customer = await Customer.create(data);
+  public async create(
+    data: {
+      business_id: number;
+      name: string;
+      phone: string;
+      notes?: string | null;
+    },
+    transaction?: Transaction
+  ) {
+    const customer = await Customer.create(data, { transaction });
     return customer;
   }
 
@@ -90,8 +111,13 @@ export class CustomerRepository {
   }
 
   // Customer Addresses
-  public async findAddressById(addressId: number, customerId: number) {
+  public async findAddressById(
+    addressId: number,
+    customerId: number,
+    transaction?: Transaction
+  ) {
     const address = await CustomerAddress.findOne({
+      transaction,
       where: {
         id: addressId,
         customer_id: customerId,
@@ -110,23 +136,30 @@ export class CustomerRepository {
       where: {
         customer_id: customerId,
       },
-      order: [['is_default', 'DESC'], ['id', 'ASC']],
+      order: [
+        ['is_default', 'DESC'],
+        ['id', 'ASC'],
+      ],
     });
 
     return addresses;
   }
 
-  public async createAddress(data: {
-    customer_id: number;
-    address: string;
-    notes?: string | null;
-    is_default?: boolean;
-  }) {
+  public async createAddress(
+    data: {
+      customer_id: number;
+      address: string;
+      notes?: string | null;
+      is_default?: boolean;
+    },
+    transaction?: Transaction
+  ) {
     // Si se marca como default, quitar default de otras direcciones
     if (data.is_default) {
       await CustomerAddress.update(
         { is_default: false },
         {
+          transaction,
           where: {
             customer_id: data.customer_id,
             is_default: true,
@@ -135,7 +168,7 @@ export class CustomerRepository {
       );
     }
 
-    const address = await CustomerAddress.create(data);
+    const address = await CustomerAddress.create(data, { transaction });
     return address;
   }
 
@@ -193,4 +226,3 @@ export class CustomerRepository {
 }
 
 export const customerRepository = new CustomerRepository();
-

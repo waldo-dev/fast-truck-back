@@ -1,3 +1,4 @@
+import { assertOrderTransition } from './order.integrity';
 import { Op, Transaction } from 'sequelize';
 import {
   Order,
@@ -14,6 +15,8 @@ import {
   ProductOptionRecipe,
   InventoryMovement,
   InventoryLocation,
+  CashRegister,
+  CashMovement,
 } from '../../shared/database/models';
 import { sequelize } from '../../shared/database/connection';
 import { AppError } from '../../shared/errors';
@@ -63,9 +66,11 @@ export class OrderRepository {
     productId: number,
     quantity: number,
     selectedOptionIds: number[],
-    businessId: number
+    businessId: number,
+    transaction?: Transaction
   ): Promise<number> {
     const product = await Product.findOne({
+      transaction,
       where: {
         id: productId,
         business_id: businessId,
@@ -83,11 +88,12 @@ export class OrderRepository {
       throw new AppError(`Product ${productId} not found or inactive`, 400);
     }
 
-    let itemPrice = product.price;
+    let itemPrice = Number(product.price);
 
     // Sumar precios de opciones seleccionadas
     if (selectedOptionIds && selectedOptionIds.length > 0) {
       const selectedOptions = await ProductOption.findAll({
+        transaction,
         where: {
           id: { [Op.in]: selectedOptionIds },
           product_id: productId,
@@ -98,7 +104,10 @@ export class OrderRepository {
         throw new AppError('Some selected options are invalid', 400);
       }
 
-      const optionsExtraPrice = selectedOptions.reduce((sum, option) => sum + (option.extra_price || 0), 0);
+      const optionsExtraPrice = selectedOptions.reduce(
+        (sum, option) => sum + Number(option.extra_price || 0),
+        0
+      );
       itemPrice += optionsExtraPrice;
     }
 
@@ -107,11 +116,18 @@ export class OrderRepository {
     today.setHours(0, 0, 0, 0);
 
     const activePromotions = await Promotion.findAll({
+      transaction,
+      order: [['id', 'ASC']],
       where: {
         business_id: businessId,
         active: true,
         [Op.and]: [
-          { [Op.or]: [{ start_date: null }, { start_date: { [Op.lte]: today } }] },
+          {
+            [Op.or]: [
+              { start_date: null },
+              { start_date: { [Op.lte]: today } },
+            ],
+          },
           { [Op.or]: [{ end_date: null }, { end_date: { [Op.gte]: today } }] },
         ],
       },
@@ -133,7 +149,9 @@ export class OrderRepository {
       if (promotion.discount_type === DiscountType.FIXED) {
         itemPrice = Math.max(0, itemPrice - (promotion.discount_value || 0));
       } else if (promotion.discount_type === DiscountType.PERCENTAGE) {
-        const discount = Math.floor((itemPrice * (promotion.discount_value || 0)) / 100);
+        const discount = Math.floor(
+          (itemPrice * (promotion.discount_value || 0)) / 100
+        );
         itemPrice = Math.max(0, itemPrice - discount);
       }
     }
@@ -148,10 +166,12 @@ export class OrderRepository {
     productId: number,
     quantity: number,
     selectedOptionIds: number[],
-    businessId: number
-  ): Promise<number> {
+    businessId: number,
+    transaction?: Transaction
+  ): Promise<number | null> {
     // Recetas del producto
     const recipes = await ProductRecipe.findAll({
+      transaction,
       where: { product_id: productId },
       include: [
         {
@@ -166,6 +186,7 @@ export class OrderRepository {
     let optionRecipes: ProductOptionRecipe[] = [];
     if (selectedOptionIds && selectedOptionIds.length > 0) {
       optionRecipes = await ProductOptionRecipe.findAll({
+        transaction,
         where: { product_option_id: { [Op.in]: selectedOptionIds } },
         include: [
           {
@@ -177,9 +198,24 @@ export class OrderRepository {
       });
     }
 
+    if (
+      !recipes.length ||
+      [...recipes, ...optionRecipes].some(r => {
+        const item = (r as any).inventoryItem as InventoryItem | undefined;
+        return (
+          !item ||
+          item.cost_per_item === null ||
+          item.cost_per_item === undefined
+        );
+      })
+    )
+      return null;
     let totalCost = 0;
 
-    const addCost = (costPerItem: number | null | undefined, qtyRequired: number) => {
+    const addCost = (
+      costPerItem: number | null | undefined,
+      qtyRequired: number
+    ) => {
       const c = Number(costPerItem ?? 0);
       totalCost += c * qtyRequired;
     };
@@ -211,9 +247,11 @@ export class OrderRepository {
     productId: number,
     quantity: number,
     selectedOptionIds: number[],
-    businessId: number
+    businessId: number,
+    transaction?: Transaction
   ): Promise<Array<{ inventory_item_id: number; quantity: number }>> {
     const recipes = await ProductRecipe.findAll({
+      transaction,
       where: { product_id: productId },
       include: [
         {
@@ -227,6 +265,7 @@ export class OrderRepository {
     let optionRecipes: ProductOptionRecipe[] = [];
     if (selectedOptionIds && selectedOptionIds.length > 0) {
       optionRecipes = await ProductOptionRecipe.findAll({
+        transaction,
         where: { product_option_id: { [Op.in]: selectedOptionIds } },
         include: [
           {
@@ -238,11 +277,12 @@ export class OrderRepository {
       });
     }
 
-    const consumptions: Array<{ inventory_item_id: number; quantity: number }> = [];
+    const consumptions: Array<{ inventory_item_id: number; quantity: number }> =
+      [];
 
     const pushConsumption = (invId: number, qty: number) => {
       if (!invId) return;
-      const existing = consumptions.find((c) => c.inventory_item_id === invId);
+      const existing = consumptions.find(c => c.inventory_item_id === invId);
       if (existing) {
         existing.quantity += qty;
       } else {
@@ -269,7 +309,12 @@ export class OrderRepository {
 
   public async findAll(
     businessId: number,
-    filters?: { status?: OrderStatus; order_source?: OrderSource; customer_id?: number; event_id?: number }
+    filters?: {
+      status?: OrderStatus;
+      order_source?: OrderSource;
+      customer_id?: number;
+      event_id?: number;
+    }
   ) {
     const where: any = {
       business_id: businessId,
@@ -501,7 +546,7 @@ export class OrderRepository {
     let cancelledSales = 0;
     let cancelledCount = 0;
     let receiptCount = 0;
-    let discounts = 0; // No se almacenan descuentos explícitos; queda en 0
+    const discounts = 0; // No se almacenan descuentos explícitos; queda en 0
 
     const paymentBreakdown: Record<string, number> = {
       CASH: 0,
@@ -529,13 +574,11 @@ export class OrderRepository {
       const payments = (order as any).payments as Array<Payment>;
       if (payments && payments.length > 0) {
         for (const payment of payments) {
-          if (payment.payment_status === PaymentStatus.FAILED) continue;
+          if (payment.payment_status !== PaymentStatus.PAID) continue;
           const method = payment.payment_method || 'OTHER';
-          paymentBreakdown[method] = (paymentBreakdown[method] || 0) + (payment.amount || 0);
+          paymentBreakdown[method] =
+            (paymentBreakdown[method] || 0) + (payment.amount || 0);
         }
-      } else if (order.payment_type) {
-        const method = order.payment_type || 'OTHER';
-        paymentBreakdown[method] = (paymentBreakdown[method] || 0) + order.total;
       }
     }
 
@@ -561,6 +604,11 @@ export class OrderRepository {
         id,
       },
       include: [
+        {
+          model: Payment,
+          as: 'payments',
+          attributes: ['id', 'payment_method', 'payment_status', 'amount'],
+        },
         {
           model: Customer,
           as: 'customer',
@@ -598,27 +646,35 @@ export class OrderRepository {
     return order;
   }
 
-  public async create(data: {
-    business_id: number;
-    customer_id: number;
-    address_id?: number | null;
-    event_id?: number | null;
-    payment_method?: PaymentMethod | null;
-    order_source: OrderSource;
-    order_type: OrderType;
-    status?: OrderStatus;
-    items: Array<{
-      product_id: number;
-      quantity: number;
-      selected_option_ids?: number[];
-      notes?: string | null;
-    }>;
-  }) {
-    return sequelize.transaction(async (t: Transaction) => {
+  public async create(
+    data: {
+      business_id: number;
+      request_key?: string;
+      request_hash?: string;
+      cash_register_id?: number;
+      payment_received?: boolean;
+      customer_id: number;
+      address_id?: number | null;
+      event_id?: number | null;
+      payment_method?: PaymentMethod | null;
+      order_source: OrderSource;
+      order_type: OrderType;
+      status?: OrderStatus;
+      items: Array<{
+        product_id: number;
+        quantity: number;
+        selected_option_ids?: number[];
+        notes?: string | null;
+      }>;
+    },
+    transaction?: Transaction
+  ) {
+    const create = async (t: Transaction) => {
       // Validar customer
       const customer = await Customer.findOne({
         where: {
           id: data.customer_id,
+          business_id: data.business_id,
         },
         transaction: t,
         lock: t.LOCK.UPDATE,
@@ -640,7 +696,10 @@ export class OrderRepository {
         });
 
         if (!address) {
-          throw new AppError('Address not found or does not belong to customer', 400);
+          throw new AppError(
+            'Address not found or does not belong to customer',
+            400
+          );
         }
       }
 
@@ -650,6 +709,7 @@ export class OrderRepository {
         eventRecord = await Event.findOne({
           where: {
             id: data.event_id,
+            business_id: data.business_id,
           },
           transaction: t,
           lock: t.LOCK.UPDATE,
@@ -666,26 +726,43 @@ export class OrderRepository {
         product_id: number;
         quantity: number;
         unit_price: number;
-        cost: number;
+        cost: number | null;
+        line_total: number;
+        product_name: string;
+        selected_options: Array<{
+          id: number;
+          name: string;
+          extra_price: number;
+        }>;
         notes?: string | null;
       }> = [];
       const consumptionAggregated: Record<number, number> = {};
 
-      for (const item of data.items) {
+      for (const item of [...data.items].sort(
+        (a, b) => a.product_id - b.product_id
+      )) {
         const itemTotal = await this.calculateItemPrice(
           item.product_id,
           item.quantity,
           item.selected_option_ids || [],
-          data.business_id
+          data.business_id,
+          t
         );
 
         // Obtener precio unitario (sin promociones para guardar en order_item)
-        const product = await Product.findByPk(item.product_id, { transaction: t, lock: t.LOCK.UPDATE });
+        const product = await Product.findByPk(item.product_id, {
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
         if (!product) {
           throw new AppError(`Product ${item.product_id} not found`, 400);
         }
 
-        let unitPrice = product.price;
+        let optionSnapshot: Array<{
+          id: number;
+          name: string;
+          extra_price: number;
+        }> = [];
         if (item.selected_option_ids && item.selected_option_ids.length > 0) {
           const selectedOptions = await ProductOption.findAll({
             where: {
@@ -695,32 +772,43 @@ export class OrderRepository {
             transaction: t,
             lock: t.LOCK.UPDATE,
           });
-          const optionsExtraPrice = selectedOptions.reduce((sum, option) => sum + (option.extra_price || 0), 0);
-          unitPrice += optionsExtraPrice;
+          optionSnapshot = selectedOptions.map(option => ({
+            id: option.id,
+            name: [option.option_type, option.option_value]
+              .filter(Boolean)
+              .join(': '),
+            extra_price: Number(option.extra_price || 0),
+          }));
         }
 
         const itemCost = await this.calculateItemCost(
           item.product_id,
           item.quantity,
           item.selected_option_ids || [],
-          data.business_id
+          data.business_id,
+          t
         );
 
         const consumptions = await this.calculateItemConsumption(
           item.product_id,
           item.quantity,
           item.selected_option_ids || [],
-          data.business_id
+          data.business_id,
+          t
         );
         for (const c of consumptions) {
           consumptionAggregated[c.inventory_item_id] =
-            (consumptionAggregated[c.inventory_item_id] || 0) + Number(c.quantity || 0);
+            (consumptionAggregated[c.inventory_item_id] || 0) +
+            Number(c.quantity || 0);
         }
 
         orderItems.push({
           product_id: item.product_id,
           quantity: item.quantity,
-          unit_price: unitPrice,
+          unit_price: itemTotal / item.quantity,
+          line_total: itemTotal,
+          product_name: product.name,
+          selected_options: optionSnapshot,
           cost: itemCost,
           notes: item.notes || null,
         });
@@ -733,6 +821,8 @@ export class OrderRepository {
       const order = await Order.create(
         {
           business_id: data.business_id,
+          request_key: data.request_key ?? null,
+          request_hash: data.request_hash ?? null,
           customer_id: data.customer_id,
           address_id: data.address_id || null,
           event_id: data.event_id || null,
@@ -747,13 +837,47 @@ export class OrderRepository {
       );
 
       // Crear payment si se envía método
+      if (data.payment_received && !data.payment_method)
+        throw new AppError('Selecciona el medio de pago recibido.', 400);
       if (data.payment_method) {
         await Payment.create(
           {
             order_id: order.dataValues.id,
             payment_method: data.payment_method,
-            payment_status: PaymentStatus.PENDING,
+            payment_status: data.payment_received
+              ? PaymentStatus.PAID
+              : PaymentStatus.PENDING,
             amount: total,
+          },
+          { transaction: t }
+        );
+      }
+
+      if (data.payment_received) {
+        if (!data.cash_register_id)
+          throw new AppError(
+            'Abre una caja antes de registrar un pago recibido.',
+            400
+          );
+        const register = await CashRegister.findOne({
+          where: {
+            id: data.cash_register_id,
+            business_id: data.business_id,
+            status: 'OPEN',
+          },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+        if (!register)
+          throw new AppError('La caja no está abierta para este negocio.', 409);
+        await CashMovement.create(
+          {
+            cash_register_id: register.id,
+            order_id: order.id,
+            type: 'SALE',
+            amount: total,
+            payment_method: data.payment_method,
+            notes: 'Pago recibido al crear pedido',
           },
           { transaction: t }
         );
@@ -761,7 +885,7 @@ export class OrderRepository {
 
       // Crear items
       await OrderItem.bulkCreate(
-        orderItems.map((item) => ({
+        orderItems.map(item => ({
           order_id: order.dataValues.id,
           ...item,
         })),
@@ -769,7 +893,9 @@ export class OrderRepository {
       );
 
       // Descontar inventario y registrar movimientos
-      for (const [invIdStr, qty] of Object.entries(consumptionAggregated)) {
+      for (const [invIdStr, qty] of Object.entries(consumptionAggregated).sort(
+        ([a], [b]) => Number(a) - Number(b)
+      )) {
         const invId = Number(invIdStr);
         const quantityToConsume = Number(qty || 0);
         if (quantityToConsume <= 0) continue;
@@ -811,7 +937,10 @@ export class OrderRepository {
           const currentStock = Number(invLocation.stock || 0);
           const newStock = currentStock - quantityToConsume;
           if (newStock < 0) {
-            throw new AppError(`Insufficient stock for inventory item ${invId} in event`, 400);
+            throw new AppError(
+              `Insufficient stock for inventory item ${invId} in event`,
+              400
+            );
           }
 
           await invLocation.update({ stock: newStock }, { transaction: t });
@@ -820,9 +949,15 @@ export class OrderRepository {
           const currentStock = Number(inventoryItem.current_stock || 0);
           const newStock = currentStock - quantityToConsume;
           if (newStock < 0) {
-            throw new AppError(`Insufficient stock for inventory item ${invId}`, 400);
+            throw new AppError(
+              `Insufficient stock for inventory item ${invId}`,
+              400
+            );
           }
-          await inventoryItem.update({ current_stock: newStock }, { transaction: t });
+          await inventoryItem.update(
+            { current_stock: newStock },
+            { transaction: t }
+          );
         }
 
         await InventoryMovement.create(
@@ -841,47 +976,143 @@ export class OrderRepository {
       }
 
       return this.findById(order.dataValues.id, t);
+    };
+    return transaction ? create(transaction) : sequelize.transaction(create);
+  }
+
+  public async updateStatus(
+    id: number,
+    status: OrderStatus,
+    expectedStatus?: OrderStatus
+  ) {
+    return sequelize.transaction(async transaction => {
+      const order = await Order.findByPk(id, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!order) throw new AppError('Order not found', 404);
+      if (
+        expectedStatus &&
+        order.status !== expectedStatus &&
+        order.status !== status
+      )
+        throw new AppError(
+          'El pedido fue actualizado por otra persona. Actualiza la lista.',
+          409
+        );
+      assertOrderTransition(order.status, status);
+      if (order.status === status) return this.findById(id, transaction);
+      const previousStatus = order.status;
+      if (status === OrderStatus.CANCELLED) {
+        const paid = await Payment.count({
+          where: { order_id: id, payment_status: PaymentStatus.PAID },
+          transaction,
+        });
+        if (paid)
+          throw new AppError(
+            'Este pedido está cobrado. Registra y concilia la devolución antes de anularlo.',
+            409
+          );
+        // Unprepared ingredients can be returned; already prepared food remains consumed as waste.
+        if (
+          [OrderStatus.CREATED, OrderStatus.CONFIRMED].includes(previousStatus)
+        ) {
+          const movements = await InventoryMovement.findAll({
+            where: { order_id: id, reason: 'ORDER_CONSUMPTION' },
+            order: [['inventory_item_id', 'ASC']],
+            transaction,
+          });
+          for (const movement of movements) {
+            if (!movement.inventory_item_id)
+              throw new AppError('Movimiento de inventario inválido.', 409);
+            const item = await InventoryItem.findOne({
+              where: {
+                id: movement.inventory_item_id,
+                business_id: order.business_id,
+              },
+              transaction,
+              lock: transaction.LOCK.UPDATE,
+            });
+            if (!item)
+              throw new AppError(
+                'No se pudo restituir el inventario del pedido.',
+                409
+              );
+            if (movement.event_id) {
+              const location = await InventoryLocation.findOne({
+                where: {
+                  inventory_item_id: movement.inventory_item_id,
+                  event_id: movement.event_id,
+                },
+                transaction,
+                lock: transaction.LOCK.UPDATE,
+              });
+              if (!location)
+                throw new AppError(
+                  'No se encontró el inventario del evento.',
+                  409
+                );
+              await location.increment('stock', {
+                by: Number(movement.quantity),
+                transaction,
+              });
+            } else {
+              await item.increment('current_stock', {
+                by: Number(movement.quantity),
+                transaction,
+              });
+            }
+            await InventoryMovement.create(
+              {
+                inventory_item_id: movement.inventory_item_id,
+                business_id: order.business_id,
+                order_id: id,
+                event_id: movement.event_id,
+                location_id: movement.location_id,
+                movement_type: InventoryMovementType.IN,
+                quantity: Number(movement.quantity),
+                reason: 'ORDER_CANCELLATION_RETURN',
+              },
+              { transaction }
+            );
+          }
+        }
+        await Payment.update(
+          { payment_status: PaymentStatus.FAILED },
+          {
+            where: { order_id: id, payment_status: PaymentStatus.PENDING },
+            transaction,
+          }
+        );
+      }
+      const timestamps: Partial<Record<OrderStatus, string>> = {
+        CONFIRMED: 'confirmed_at',
+        PREPARING: 'preparing_at',
+        READY: 'ready_at',
+        DELIVERED: 'delivered_at',
+        CANCELLED: 'cancelled_at',
+      };
+      await order.update(
+        {
+          status,
+          ...(timestamps[status] ? { [timestamps[status]!]: new Date() } : {}),
+        },
+        { transaction }
+      );
+      await sequelize.query(
+        'INSERT INTO order_status_history (order_id, previous_status, status) VALUES (:id, :previous, :status)',
+        {
+          replacements: { id, previous: previousStatus, status },
+          transaction,
+        }
+      );
+      return this.findById(id, transaction);
     });
   }
 
-  public async updateStatus(id: number,status: OrderStatus) {
-    const order = await this.findById(id);
-
-    // Validar transición de estado
-    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-      [OrderStatus.CREATED]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-      [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
-      [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],
-      [OrderStatus.READY]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-      [OrderStatus.DELIVERED]: [],
-      [OrderStatus.CANCELLED]: [],
-    };
-
-    const currentStatus = order.status;
-    const allowedStatuses = validTransitions[currentStatus];
-
-    if (!allowedStatuses.includes(status)) {
-      throw new AppError(
-        `Invalid status transition from ${currentStatus} to ${status}`,
-        400
-      );
-    }
-
-    await order.update({ status });
-    return order.reload();
-  }
-
   public async delete(id: number) {
-    const order = await this.findById(id);
-
-    // Solo se pueden eliminar órdenes en estado CREATED o CANCELLED
-    if (order.status !== OrderStatus.CREATED && order.status !== OrderStatus.CANCELLED) {
-      throw new AppError('Cannot delete order in current status', 400);
-    }
-
-    await order.destroy();
+    return this.updateStatus(id, OrderStatus.CANCELLED);
   }
 }
 
 export const orderRepository = new OrderRepository();
-

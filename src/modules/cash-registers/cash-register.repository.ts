@@ -1,14 +1,28 @@
-import { CashRegister, CashMovement, Order } from '../../shared/database/models';
+import { Transaction } from 'sequelize';
+import { sequelize } from '../../shared/database/connection';
+import {
+  CashRegister,
+  CashMovement,
+  Order,
+} from '../../shared/database/models';
 import { AppError } from '../../shared/errors';
 import { PaymentMethod } from '../../shared/database/models/enums';
 
 export class CashRegisterRepository {
-  public async findActive(businessId: number, locationId?: number | null) {
+  public async findActive(
+    businessId: number,
+    locationId?: number | null,
+    transaction?: Transaction
+  ) {
     const where: any = { business_id: businessId, status: 'OPEN' };
     if (locationId !== undefined) {
       where.location_id = locationId;
     }
-    return CashRegister.findOne({ where, order: [['opened_at', 'DESC']] });
+    return CashRegister.findOne({
+      where,
+      order: [['opened_at', 'DESC']],
+      transaction,
+    });
   }
 
   public async findOpenForBusiness(businessId: number) {
@@ -18,8 +32,12 @@ export class CashRegisterRepository {
     });
   }
 
-  public async getNextCodeForBusiness(businessId: number): Promise<number> {
+  public async getNextCodeForBusiness(
+    businessId: number,
+    transaction?: Transaction
+  ): Promise<number> {
     const latestRegister = await CashRegister.findOne({
+      transaction,
       where: { business_id: businessId },
       order: [
         ['code', 'DESC'],
@@ -31,46 +49,65 @@ export class CashRegisterRepository {
     return Number.isFinite(lastCode) ? lastCode + 1 : 1;
   }
 
-  public async createRegister(data: {
-    business_id: number;
-    location_id?: number | null;
-    opened_by?: string | null;
-    opening_amount?: number | null;
-    code: number;
-  }) {
-    return CashRegister.create({
-      business_id: data.business_id,
-      location_id: data.location_id ?? null,
-      opened_by: data.opened_by ?? null,
-      opened_at: new Date(),
-      opening_amount: data.opening_amount ?? 0,
-      code: data.code,
-      status: 'OPEN',
-      closed_at: null,
-      closed_by: null,
-      closing_amount: null,
-    });
+  public async createRegister(
+    data: {
+      business_id: number;
+      location_id?: number | null;
+      opened_by?: string | null;
+      opening_amount?: number | null;
+      code: number;
+    },
+    transaction?: Transaction
+  ) {
+    return CashRegister.create(
+      {
+        business_id: data.business_id,
+        location_id: data.location_id ?? null,
+        opened_by: data.opened_by ?? null,
+        opened_at: new Date(),
+        opening_amount: data.opening_amount ?? 0,
+        code: data.code,
+        status: 'OPEN',
+        closed_at: null,
+        closed_by: null,
+        closing_amount: null,
+      },
+      { transaction }
+    );
   }
 
-  public async closeRegister(id: number, data: { closed_by?: string | null; closing_amount?: number | null }) {
-    const register = await CashRegister.findByPk(id);
+  public async closeRegister(
+    id: number,
+    data: { closed_by?: string | null; closing_amount?: number | null },
+    transaction?: Transaction
+  ) {
+    const register = await CashRegister.findByPk(id, {
+      transaction,
+      ...(transaction ? { lock: transaction.LOCK.UPDATE } : {}),
+    });
     if (!register) {
       throw new AppError('Cash register not found', 404);
     }
     if (register.status === 'CLOSED') {
       throw new AppError('Cash register already closed', 400);
     }
-    await register.update({
-      status: 'CLOSED',
-      closed_by: data.closed_by ?? null,
-      closing_amount: data.closing_amount ?? null,
-      closed_at: new Date(),
-    });
+    await register.update(
+      {
+        status: 'CLOSED',
+        closed_by: data.closed_by ?? null,
+        closing_amount: data.closing_amount ?? null,
+        closed_at: new Date(),
+      },
+      { transaction }
+    );
     return register;
   }
 
-  public async getById(id: number) {
-    const register = await CashRegister.findByPk(id);
+  public async getById(id: number, transaction?: Transaction) {
+    const register = await CashRegister.findByPk(id, {
+      transaction,
+      ...(transaction ? { lock: transaction.LOCK.UPDATE } : {}),
+    });
     if (!register) {
       throw new AppError('Cash register not found', 404);
     }
@@ -85,20 +122,35 @@ export class CashRegisterRepository {
     order_id?: number | null;
     notes?: string | null;
   }) {
-    const register = await CashRegister.findByPk(data.cash_register_id);
-    if (!register) {
-      throw new AppError('Cash register not found', 404);
-    }
-    if (register.status === 'CLOSED') {
-      throw new AppError('Cash register is closed', 400);
-    }
-    return CashMovement.create({
-      cash_register_id: data.cash_register_id,
-      type: data.type ?? null,
-      amount: data.amount ?? null,
-      payment_method: data.payment_method ?? null,
-      order_id: data.order_id ?? null,
-      notes: data.notes ?? null,
+    return sequelize.transaction(async transaction => {
+      const register = await CashRegister.findByPk(data.cash_register_id, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!register) {
+        throw new AppError('Cash register not found', 404);
+      }
+      if (register.status === 'CLOSED') {
+        throw new AppError('Cash register is closed', 400);
+      }
+      if (data.order_id)
+        throw new AppError(
+          'Los pagos de pedidos se registran desde el pedido, no como movimientos manuales.',
+          400
+        );
+      if (!['IN', 'OUT'].includes(data.type || ''))
+        throw new AppError('Tipo de movimiento manual inválido.', 400);
+      return CashMovement.create(
+        {
+          cash_register_id: data.cash_register_id,
+          type: data.type ?? null,
+          amount: data.amount ?? null,
+          payment_method: data.payment_method ?? null,
+          order_id: data.order_id ?? null,
+          notes: data.notes ?? null,
+        },
+        { transaction }
+      );
     });
   }
 
@@ -109,7 +161,11 @@ export class CashRegisterRepository {
     });
   }
 
-  public async listRegisters(params: { business_id: number; location_id?: number | null; status?: string | null }) {
+  public async listRegisters(params: {
+    business_id: number;
+    location_id?: number | null;
+    status?: string | null;
+  }) {
     const where: any = { business_id: params.business_id };
     if (params.location_id !== undefined) {
       where.location_id = params.location_id;
@@ -123,16 +179,17 @@ export class CashRegisterRepository {
     });
   }
 
-  public async getMovements(cashRegisterId: number) {
+  public async getMovements(cashRegisterId: number, transaction?: Transaction) {
     return CashMovement.findAll({
+      transaction,
       where: { cash_register_id: cashRegisterId },
       attributes: ['type', 'amount', 'payment_method'],
     });
   }
 
-  public async getSummaryData(registerId: number) {
-    const register = await this.getById(registerId);
-    const movements = await this.getMovements(registerId);
+  public async getSummaryData(registerId: number, transaction?: Transaction) {
+    const register = await this.getById(registerId, transaction);
+    const movements = await this.getMovements(registerId, transaction);
 
     let cashSales = 0;
     let cardSales = 0;
@@ -152,27 +209,35 @@ export class CashRegisterRepository {
             m.payment_method === PaymentMethod.CREDIT_CARD
           ) {
             cardSales += amount;
-          } else if (m.payment_method === PaymentMethod.TRANSFER || m.payment_method === PaymentMethod.WEBPAY) {
+          } else if (
+            m.payment_method === PaymentMethod.TRANSFER ||
+            m.payment_method === PaymentMethod.WEBPAY
+          ) {
             transferSales += amount;
           } else {
             cashSales += amount;
           }
           break;
         case 'IN':
-          movementsIn += amount;
+          if (m.payment_method === PaymentMethod.CASH) movementsIn += amount;
           break;
         case 'OUT':
-          movementsOut += amount;
+          if (m.payment_method === PaymentMethod.CASH) movementsOut += amount;
           break;
         case 'REFUND':
-          refunds += amount;
+          if (m.payment_method === PaymentMethod.CASH) refunds += amount;
           break;
         default:
           break;
       }
     }
 
-    const expectedCash = Number(register.opening_amount || 0) + cashSales + movementsIn - movementsOut - refunds;
+    const expectedCash =
+      Number(register.opening_amount || 0) +
+      cashSales +
+      movementsIn -
+      movementsOut -
+      refunds;
 
     return {
       register,
@@ -192,8 +257,3 @@ export class CashRegisterRepository {
 }
 
 export const cashRegisterRepository = new CashRegisterRepository();
-
-
-
-
-

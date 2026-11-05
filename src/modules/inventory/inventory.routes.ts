@@ -27,11 +27,14 @@ import { inventoryImportController } from './inventory-import.controller';
 const router = Router();
 const upload = multer();
 
-router.use(authenticate);
-router.use(injectBusinessId);
+router.use('/inventory', authenticate, injectBusinessId);
 
 // Items
-router.get('/inventory/items', validateQuery(listItemsQuerySchema), inventoryController.listItems);
+router.get(
+  '/inventory/items',
+  validateQuery(listItemsQuerySchema),
+  inventoryController.listItems
+);
 router.post(
   '/inventory/items',
   authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR),
@@ -102,5 +105,3 @@ router.post(
 );
 
 export default router;
-
-

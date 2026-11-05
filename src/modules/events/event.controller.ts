@@ -4,9 +4,15 @@ import { UserRole } from '../../shared/database/models/enums';
 import { eventService } from './event.service';
 
 export class EventController {
-  public getAll = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getAll = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
-      const businessIdParam = req.query.business_id ? Number(req.query.business_id) : req.business_id;
+      const businessIdParam = req.query.business_id
+        ? Number(req.query.business_id)
+        : req.business_id;
       if (!businessIdParam || Number.isNaN(businessIdParam)) {
         res.status(403).json({
           success: false,
@@ -18,9 +24,16 @@ export class EventController {
       }
 
       const futureOnly = req.query.future === 'true';
-      const isActive = typeof req.query.is_active === 'string' ? req.query.is_active === 'true' : undefined;
+      const isActive =
+        typeof req.query.is_active === 'string'
+          ? req.query.is_active === 'true'
+          : undefined;
 
-      const events = await eventService.getAllEvents(businessIdParam, futureOnly, isActive);
+      const events = await eventService.getAllEvents(
+        businessIdParam,
+        futureOnly,
+        isActive
+      );
 
       res.status(200).json({
         success: true,
@@ -31,7 +44,11 @@ export class EventController {
     }
   };
 
-  public getById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getById = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id) {
         res.status(403).json({
@@ -66,7 +83,11 @@ export class EventController {
     }
   };
 
-  public create = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public create = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(403).json({
@@ -147,7 +168,11 @@ export class EventController {
     }
   };
 
-  public getSummary = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getSummary = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id) {
         res.status(403).json({
@@ -157,7 +182,7 @@ export class EventController {
         return;
       }
 
-      const id = req.user?.id
+      const id = Number(req.params.id);
       if (!id) {
         res.status(400).json({
           success: false,
@@ -177,7 +202,11 @@ export class EventController {
     }
   };
 
-  public getAnalytics = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getAnalytics = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id) {
         res.status(403).json({
@@ -187,7 +216,9 @@ export class EventController {
         return;
       }
 
-      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const limit = req.query.limit
+        ? parseInt(req.query.limit as string, 10)
+        : undefined;
       const analytics = await eventService.getAnalytics(req.business_id, limit);
 
       res.status(200).json({
@@ -199,7 +230,11 @@ export class EventController {
     }
   };
 
-  public createExpense = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public createExpense = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id) {
         res.status(403).json({
@@ -212,7 +247,11 @@ export class EventController {
       const eventId = parseInt(req.params.id, 10);
       const { type, description, amount } = req.body;
 
-      const expense = await eventService.addExpense(eventId, req.business_id, { type, description, amount });
+      const expense = await eventService.addExpense(eventId, req.business_id, {
+        type,
+        description,
+        amount,
+      });
 
       res.status(201).json({
         success: true,
@@ -223,7 +262,11 @@ export class EventController {
     }
   };
 
-  public listExpenses = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public listExpenses = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id) {
         res.status(403).json({
@@ -233,7 +276,7 @@ export class EventController {
         return;
       }
 
-      const eventId = Number(req.params?.id)
+      const eventId = Number(req.params?.id);
       if (!eventId) {
         res.status(400).json({
           success: false,
@@ -241,7 +284,10 @@ export class EventController {
         });
         return;
       }
-      const expenses = await eventService.listExpenses(eventId, req.business_id);
+      const expenses = await eventService.listExpenses(
+        eventId,
+        req.business_id
+      );
       if (!expenses) {
         res.status(400).json({
           success: false,
@@ -259,7 +305,11 @@ export class EventController {
     }
   };
 
-  public deleteExpense = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public deleteExpense = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id) {
         res.status(403).json({
@@ -282,5 +332,3 @@ export class EventController {
 }
 
 export const eventController = new EventController();
-
-

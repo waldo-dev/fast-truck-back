@@ -1,6 +1,8 @@
+import { sequelize } from '../../shared/database/connection';
 import { AppError } from '../../shared/errors';
 import { cashRegisterRepository } from './cash-register.repository';
 import { PaymentMethod } from '../../shared/database/models/enums';
+import { Location } from '../../shared/database/models';
 
 export class CashRegisterService {
   public async openRegister(data: {
@@ -13,37 +15,82 @@ export class CashRegisterService {
     if (!data.business_id || Number.isNaN(data.business_id)) {
       throw new AppError('Business ID is required', 400);
     }
-    if (!data.allowMultiple) {
-      const active = await cashRegisterRepository.findActive(data.business_id, data.location_id ?? undefined);
-      if (active) {
-        throw new AppError('There is already an open cash register for this business/location', 400);
-      }
+    if (
+      data.location_id &&
+      !(await Location.findOne({
+        where: { id: data.location_id, business_id: data.business_id },
+      }))
+    ) {
+      throw new AppError('Local not found', 404);
     }
-    const nextCode = await cashRegisterRepository.getNextCodeForBusiness(data.business_id);
-    return cashRegisterRepository.createRegister({
-      ...data,
-      code: nextCode,
+    return sequelize.transaction(async transaction => {
+      await sequelize.query(
+        'SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))',
+        {
+          replacements: { key: `cash-register:${data.business_id}` },
+          transaction,
+        }
+      );
+      if (!data.allowMultiple) {
+        const active = await cashRegisterRepository.findActive(
+          data.business_id,
+          data.location_id ?? undefined,
+          transaction
+        );
+        if (active) {
+          throw new AppError(
+            'There is already an open cash register for this business/location',
+            400
+          );
+        }
+      }
+      const nextCode = await cashRegisterRepository.getNextCodeForBusiness(
+        data.business_id,
+        transaction
+      );
+      return cashRegisterRepository.createRegister(
+        {
+          ...data,
+          code: nextCode,
+        },
+        transaction
+      );
     });
   }
 
-  public async closeRegister(id: number, data: { closed_by?: string | null; closing_amount?: number | null }) {
-    const { expectedCash } = await cashRegisterRepository.getSummaryData(id);
-    const closingAmount = data.closing_amount ?? expectedCash;
-    const register = await cashRegisterRepository.closeRegister(id, {
-      closed_by: data.closed_by,
-      closing_amount: closingAmount,
-    });
+  public async closeRegister(
+    id: number,
+    data: { closed_by?: string | null; closing_amount?: number | null }
+  ) {
+    return sequelize.transaction(async transaction => {
+      const { expectedCash } = await cashRegisterRepository.getSummaryData(
+        id,
+        transaction
+      );
+      const closingAmount = data.closing_amount ?? expectedCash;
+      const register = await cashRegisterRepository.closeRegister(
+        id,
+        {
+          closed_by: data.closed_by,
+          closing_amount: closingAmount,
+        },
+        transaction
+      );
 
-    return {
-      registerId: register.id,
-      expectedCash,
-      closingAmount,
-      difference: Number(closingAmount || 0) - Number(expectedCash || 0),
-    };
+      return {
+        registerId: register.id,
+        expectedCash,
+        closingAmount,
+        difference: Number(closingAmount || 0) - Number(expectedCash || 0),
+      };
+    });
   }
 
   public async getActive(business_id: number, location_id?: number | null) {
-    return cashRegisterRepository.findActive(business_id, location_id ?? undefined);
+    return cashRegisterRepository.findActive(
+      business_id,
+      location_id ?? undefined
+    );
   }
 
   public async addMovement(data: {
@@ -72,7 +119,11 @@ export class CashRegisterService {
     return cashRegisterRepository.listMovements(cash_register_id);
   }
 
-  public async getHistory(params: { business_id: number; location_id?: number | null; status?: string | null }) {
+  public async getHistory(params: {
+    business_id: number;
+    location_id?: number | null;
+    status?: string | null;
+  }) {
     if (!params.business_id || Number.isNaN(params.business_id)) {
       throw new AppError('Business ID is required', 400);
     }
@@ -93,7 +144,9 @@ export class CashRegisterService {
 
     const closingAmount = register.closing_amount ?? null;
     const difference =
-      closingAmount !== null && closingAmount !== undefined ? Number(closingAmount) - Number(expectedCash) : null;
+      closingAmount !== null && closingAmount !== undefined
+        ? Number(closingAmount) - Number(expectedCash)
+        : null;
 
     return {
       openingAmount: Number(register.opening_amount || 0),
@@ -117,7 +170,9 @@ export class CashRegisterService {
   }) {
     if (params.payment_method !== PaymentMethod.CASH) return;
 
-    const register = await cashRegisterRepository.findActive(params.business_id);
+    const register = await cashRegisterRepository.findActive(
+      params.business_id
+    );
     if (!register) return;
 
     await cashRegisterRepository.addMovement({
@@ -132,8 +187,3 @@ export class CashRegisterService {
 }
 
 export const cashRegisterService = new CashRegisterService();
-
-
-
-
-

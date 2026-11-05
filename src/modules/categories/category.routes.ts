@@ -1,19 +1,45 @@
+import { Category } from '../../shared/database/models';
+import { protectResource } from '../../shared/middlewares/businessAccess';
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate, validateParams } from '../../shared/middlewares';
+import {
+  authenticate,
+  authorize,
+  injectBusinessId,
+  validate,
+  validateParams,
+} from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { categoryController } from './category.controller';
-import { createCategorySchema, updateCategorySchema, categoryParamsSchema, bulkCreateCategorySchema } from './category.schemas';
+import {
+  createCategorySchema,
+  updateCategorySchema,
+  categoryParamsSchema,
+  bulkCreateCategorySchema,
+} from './category.schemas';
 
 const router = Router();
 
 // Todas las rutas requieren autenticación
 router.use(authenticate);
+router.param(
+  'id',
+  protectResource(async id => (await Category.findByPk(id))?.business_id)
+);
 
 // Rutas para BUSINESS_OWNER con múltiples negocios (sin business_id inyectado)
-router.get('/owner', authorize(UserRole.BUSINESS_OWNER), categoryController.getByOwner);
+router.get(
+  '/owner',
+  authorize(UserRole.BUSINESS_OWNER),
+  categoryController.getByOwner
+);
 
 // Bulk create para múltiples negocios (ADMIN o BUSINESS_OWNER con pertenencia)
-router.post('/bulk', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER), validate(bulkCreateCategorySchema), categoryController.bulkCreate);
+router.post(
+  '/bulk',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  validate(bulkCreateCategorySchema),
+  categoryController.bulkCreate
+);
 
 // Rutas que requieren business_id (ADMIN/LOCAL_OPERATOR scoping)
 router.use(injectBusinessId);
@@ -22,10 +48,19 @@ router.use(injectBusinessId);
 router.get('/', categoryController.getAll);
 
 // GET /categories/:id - Obtener categoría por ID (ADMIN y LOCAL_OPERATOR pueden leer)
-router.get('/:id', validateParams(categoryParamsSchema), categoryController.getById);
+router.get(
+  '/:id',
+  validateParams(categoryParamsSchema),
+  categoryController.getById
+);
 
 // POST /categories - Crear categoría (solo ADMIN)
-router.post('/', authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER), validate(createCategorySchema), categoryController.create);
+router.post(
+  '/',
+  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  validate(createCategorySchema),
+  categoryController.create
+);
 
 // PUT /categories/:id - Actualizar categoría (solo ADMIN)
 router.put(
@@ -45,5 +80,3 @@ router.delete(
 );
 
 export default router;
-
-

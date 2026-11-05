@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { authenticate, authorize, injectBusinessId, validate, validateParams, validateQuery } from '../../shared/middlewares';
+import {
+  authenticate,
+  authorize,
+  injectBusinessId,
+  validate,
+  validateParams,
+  validateQuery,
+} from '../../shared/middlewares';
 import { UserRole } from '../../shared/database/models/enums';
 import { subscriptionController } from './subscription.controller';
 import {
@@ -35,7 +42,7 @@ router.get(
 // POST /subscriptions - crear (ADMIN, OWNER)
 router.post(
   '/',
-  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  authorize(UserRole.ADMIN),
   validate(createSubscriptionSchema),
   subscriptionController.create
 );
@@ -43,7 +50,7 @@ router.post(
 // PUT /subscriptions/:id - actualizar (ADMIN, OWNER)
 router.put(
   '/:id',
-  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  authorize(UserRole.ADMIN),
   validateParams(subscriptionParamsSchema),
   validate(updateSubscriptionSchema),
   subscriptionController.update
@@ -52,22 +59,10 @@ router.put(
 // POST /subscriptions/:id/payments - registrar pago (ADMIN, OWNER)
 router.post(
   '/:id/payments',
-  authorize(UserRole.ADMIN, UserRole.BUSINESS_OWNER),
+  authorize(UserRole.ADMIN),
   validateParams(subscriptionParamsSchema),
   validate(createSubscriptionPaymentSchema),
   subscriptionController.addPayment
 );
 
 export default router;
-
-
-
-
-
-
-
-
-
-
-
-

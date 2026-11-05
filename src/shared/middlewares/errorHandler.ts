@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { AppError } from '../errors';
 
@@ -6,10 +6,14 @@ export const errorHandler = (
   err: Error | AppError,
   req: Request,
   res: Response,
+  _next: NextFunction
 ): void => {
+  void _next; // Express identifies error handlers by all four arguments.
   const isAppError = err instanceof AppError;
   const statusCode = isAppError ? err.statusCode : 500;
-  const message = err.message || 'Internal Server Error';
+  const message = isAppError
+    ? err.message
+    : 'No se pudo completar la solicitud. Intenta nuevamente.';
   // Extra info de errores de base de datos (Sequelize/Postgres) para depurar
   const dbDetail =
     (err as any)?.parent?.detail ||
@@ -32,10 +36,13 @@ export const errorHandler = (
     success: false,
     error: {
       message,
-      ...(dbCode ? { code: dbCode } : {}),
-      ...(dbDetail ? { detail: dbDetail } : {}),
+      ...(process.env.NODE_ENV === 'development' && dbCode
+        ? { code: dbCode }
+        : {}),
+      ...(process.env.NODE_ENV === 'development' && dbDetail
+        ? { detail: dbDetail }
+        : {}),
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     },
   });
 };
-

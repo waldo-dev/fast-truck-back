@@ -4,7 +4,11 @@ import { UserRole } from '../../shared/database/models/enums';
 import { paymentService } from './payment.service';
 
 export class PaymentController {
-  public getByOrder = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getByOrder = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id) {
         res.status(403).json({
@@ -28,7 +32,10 @@ export class PaymentController {
         return;
       }
 
-      const payments = await paymentService.getPaymentsByOrder(orderId, req.business_id);
+      const payments = await paymentService.getPaymentsByOrder(
+        orderId,
+        req.business_id
+      );
 
       res.status(200).json({
         success: true,
@@ -39,7 +46,11 @@ export class PaymentController {
     }
   };
 
-  public create = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public create = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.business_id || !req.user) {
         res.status(403).json({
@@ -58,6 +69,7 @@ export class PaymentController {
           order_id,
           payment_method,
           amount,
+          cash_register_id: req.body.cash_register_id,
         },
         req.business_id,
         req.user.role as UserRole
@@ -74,5 +86,3 @@ export class PaymentController {
 }
 
 export const paymentController = new PaymentController();
-
-

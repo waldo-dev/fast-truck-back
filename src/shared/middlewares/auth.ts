@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { AppError } from '../errors';
 import { User } from '../database/models';
+import { resolveBusinessScope } from './businessAccess';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -15,7 +16,11 @@ export interface AuthRequest extends Request {
   business_id?: number;
 }
 
-export const authenticate = async (req: AuthRequest, _res: Response, next: NextFunction): Promise<void> => {
+export const authenticate = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -53,10 +58,7 @@ export const authenticate = async (req: AuthRequest, _res: Response, next: NextF
       business_id: user.business_id,
     };
 
-    // Inyectar business_id en el request para scoping
-    if (user.business_id) {
-      req.business_id = user.business_id;
-    }
+    await resolveBusinessScope(req);
 
     next();
   } catch (error) {
@@ -67,4 +69,3 @@ export const authenticate = async (req: AuthRequest, _res: Response, next: NextF
     }
   }
 };
-

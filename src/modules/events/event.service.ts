@@ -4,8 +4,15 @@ import { eventRepository } from './event.repository';
 import { Location } from '../../shared/database/models';
 
 export class EventService {
-  public async getAllEvents(businessId: number, futureOnly: boolean = false, isActive?: boolean) {
-    const events = await eventRepository.findAll(businessId, { future_only: futureOnly, is_active: isActive });
+  public async getAllEvents(
+    businessId: number,
+    futureOnly: boolean = false,
+    isActive?: boolean
+  ) {
+    const events = await eventRepository.findAll(businessId, {
+      future_only: futureOnly,
+      is_active: isActive,
+    });
     return events;
   }
 
@@ -47,14 +54,21 @@ export class EventService {
     userRole: UserRole
   ) {
     // ADMIN, BUSINESS_OWNER o LOCAL_OPERATOR
-    if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER, UserRole.LOCAL_OPERATOR].includes(userRole)) {
+    if (
+      ![
+        UserRole.ADMIN,
+        UserRole.BUSINESS_OWNER,
+        UserRole.LOCAL_OPERATOR,
+      ].includes(userRole)
+    ) {
       throw new AppError('Not authorized to create events', 403);
     }
 
     // Si no viene location_id pero sí una dirección, crear un Location y usar su id
     let locationIdToUse = data.location_id ?? null;
     if (!locationIdToUse && data.address) {
-      const locationName = data.location_name || `${data.name || 'Event'} - ${data.address}`;
+      const locationName =
+        data.location_name || `${data.name || 'Event'} - ${data.address}`;
       const location = await Location.create({
         business_id: businessId,
         name: locationName,
@@ -102,23 +116,24 @@ export class EventService {
     businessId: number,
     data: { type?: string | null; description?: string | null; amount: number }
   ) {
-    console.log("🚀 ~ EventService ~ addExpense ~ businessId:", businessId)
     return eventRepository.addExpense({
       event_id: eventId,
+      business_id: businessId,
       ...data,
     });
   }
 
-  public async listExpenses(eventId: number, businessId?: number | null) {
-    console.log("🚀 ~ EventService ~ listExpenses ~ businessId:", businessId)
-    return eventRepository.listExpenses(eventId);
+  public async listExpenses(eventId: number, businessId: number) {
+    return eventRepository.listExpenses(eventId, businessId);
   }
 
-  public async deleteExpense(eventId: number, expenseId: number, businessId: number) {
+  public async deleteExpense(
+    eventId: number,
+    expenseId: number,
+    businessId: number
+  ) {
     return eventRepository.deleteExpense(eventId, expenseId, businessId);
   }
 }
 
 export const eventService = new EventService();
-
-

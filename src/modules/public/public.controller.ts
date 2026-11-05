@@ -1,14 +1,32 @@
 import { Response, NextFunction } from 'express';
-import { Product, Promotion, Event, PaymentConfig } from '../../shared/database/models';
-import { ProductStatus, DiscountType, PaymentMethod } from '../../shared/database/models/enums';
+import {
+  Business,
+  Category,
+  Product,
+  ProductOption,
+  Promotion,
+  Event,
+  PaymentConfig,
+} from '../../shared/database/models';
+import {
+  ProductStatus,
+  DiscountType,
+  PaymentMethod,
+  OrderSource,
+} from '../../shared/database/models/enums';
 import { Op } from 'sequelize';
 import { orderService } from '../orders/order.service';
 import { AppError } from '../../shared/errors';
 
 export class PublicController {
-  public getMenu = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+  public getMenu = async (
+    req: any,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
-      const businessId = req.business_id || parseInt(req.query.business_id as string, 10);
+      const businessId =
+        req.business_id || parseInt(req.query.business_id as string, 10);
 
       if (!businessId || isNaN(businessId)) {
         res.status(400).json({
@@ -30,6 +48,14 @@ export class PublicController {
           status: ProductStatus.ACTIVE,
         },
         attributes: ['id', 'name', 'description', 'price', 'image_url'],
+        include: [
+          { model: Category, as: 'category', attributes: ['id', 'name'] },
+          {
+            model: ProductOption,
+            as: 'options',
+            attributes: ['id', 'option_type', 'option_value', 'extra_price'],
+          },
+        ],
         order: [['name', 'ASC']],
       });
 
@@ -39,11 +65,26 @@ export class PublicController {
           business_id: businessId,
           active: true,
           [Op.and]: [
-            { [Op.or]: [{ start_date: null }, { start_date: { [Op.lte]: today } }] },
-            { [Op.or]: [{ end_date: null }, { end_date: { [Op.gte]: today } }] },
+            {
+              [Op.or]: [
+                { start_date: null },
+                { start_date: { [Op.lte]: today } },
+              ],
+            },
+            {
+              [Op.or]: [{ end_date: null }, { end_date: { [Op.gte]: today } }],
+            },
           ],
         },
-        attributes: ['id', 'name', 'description', 'discount_type', 'discount_value', 'start_date', 'end_date'],
+        attributes: [
+          'id',
+          'name',
+          'description',
+          'discount_type',
+          'discount_value',
+          'start_date',
+          'end_date',
+        ],
         include: [
           {
             model: Product,
@@ -55,32 +96,41 @@ export class PublicController {
       });
 
       // Calcular precios con promociones
-      const productsWithPromotions = products.map((product) => {
+      const productsWithPromotions = products.map(product => {
         const productData: any = {
           id: product.id,
           name: product.name,
           description: product.description,
           price: product.price,
           image_url: product.image_url,
+          category: (product as any).category ?? null,
+          options: (product as any).options ?? [],
           final_price: product.price,
         };
 
         // Buscar promoción aplicable
-        const applicablePromotion = promotions.find((promo) =>
+        const applicablePromotion = promotions.find(promo =>
           (promo as any).products.some((p: any) => p.id === product.id)
         );
 
         if (applicablePromotion) {
           if (applicablePromotion.discount_type === DiscountType.FIXED) {
-            productData.final_price = Math.max(0, product.price - (applicablePromotion.discount_value || 0));
+            productData.final_price = Math.max(
+              0,
+              product.price - (applicablePromotion.discount_value || 0)
+            );
             productData.promotion = {
               id: applicablePromotion.id,
               name: applicablePromotion.name,
               discount_type: applicablePromotion.discount_type,
               discount_value: applicablePromotion.discount_value,
             };
-          } else if (applicablePromotion.discount_type === DiscountType.PERCENTAGE) {
-            const discount = Math.floor((product.price * (applicablePromotion.discount_value || 0)) / 100);
+          } else if (
+            applicablePromotion.discount_type === DiscountType.PERCENTAGE
+          ) {
+            const discount = Math.floor(
+              (product.price * (applicablePromotion.discount_value || 0)) / 100
+            );
             productData.final_price = Math.max(0, product.price - discount);
             productData.promotion = {
               id: applicablePromotion.id,
@@ -97,8 +147,18 @@ export class PublicController {
       res.status(200).json({
         success: true,
         data: {
+          business_id: businessId,
+          business: await Business.findByPk(businessId, {
+            attributes: [
+              'id',
+              'name',
+              'brand_name',
+              'logo_url',
+              'primary_color',
+            ],
+          }),
           products: productsWithPromotions,
-          promotions: promotions.map((p) => ({
+          promotions: promotions.map(p => ({
             id: p.id,
             name: p.name,
             description: p.description,
@@ -142,11 +202,18 @@ export class PublicController {
     const csvContent = [headers.join(';'), exampleRow.join(';')].join('\n');
 
     res.header('Content-Type', 'text/csv');
-    res.header('Content-Disposition', 'attachment; filename="menu-template.csv"');
+    res.header(
+      'Content-Disposition',
+      'attachment; filename="menu-template.csv"'
+    );
     res.status(200).send(csvContent);
   };
 
-  public createOrder = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+  public createOrder = async (
+    req: any,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const payload = req.body;
       const businessId = req.business_id ?? payload.business_id;
@@ -158,6 +225,12 @@ export class PublicController {
       const body = {
         ...payload,
         business_id: businessId,
+        customer_id: undefined,
+        address_id: undefined,
+        status: undefined,
+        order_source: OrderSource.ONLINE,
+        payment_received: false,
+        cash_register_id: undefined,
       };
 
       const order = await orderService.createOrder(body);
@@ -174,9 +247,14 @@ export class PublicController {
     }
   };
 
-  public getEvents = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+  public getEvents = async (
+    req: any,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
-      const businessId = req.business_id || parseInt(req.query.business_id as string, 10);
+      const businessId =
+        req.business_id || parseInt(req.query.business_id as string, 10);
 
       if (!businessId || isNaN(businessId)) {
         res.status(400).json({
@@ -209,9 +287,14 @@ export class PublicController {
     }
   };
 
-  public getPaymentMethods = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+  public getPaymentMethods = async (
+    req: any,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
-      const businessId = req.business_id || parseInt(req.query.business_id as string, 10);
+      const businessId =
+        req.business_id || parseInt(req.query.business_id as string, 10);
 
       if (!businessId || isNaN(businessId)) {
         res.status(400).json({
@@ -227,7 +310,11 @@ export class PublicController {
       const methods = [
         { method: PaymentMethod.CASH, name: 'Efectivo', available: true },
         { method: PaymentMethod.CARD, name: 'Tarjeta', available: true },
-        { method: PaymentMethod.TRANSFER, name: 'Transferencia', available: true },
+        {
+          method: PaymentMethod.TRANSFER,
+          name: 'Transferencia',
+          available: true,
+        },
       ];
 
       // Verificar si hay configuración activa para WEBPAY
@@ -258,5 +345,3 @@ export class PublicController {
 }
 
 export const publicController = new PublicController();
-
-

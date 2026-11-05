@@ -16,7 +16,6 @@ import eventRoutes from './modules/events/event.routes';
 import orderRoutes from './modules/orders/order.routes';
 import paymentRoutes from './modules/payments/payment.routes';
 import paymentConfigRoutes from './modules/payment-configs/payment-config.routes';
-import mailingRoutes from './modules/mailing/mailing.routes';
 import publicRoutes from './modules/public/public.routes';
 import planRoutes from './modules/plans/plan.routes';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
@@ -26,7 +25,12 @@ import cashRegisterRoutes from './modules/cash-registers/cash-register.routes';
 const createApp = (): Application => {
   const app = express();
 
-  const allowedOrigins = ['https://fast-trucks.chilsmart.com', 'http://localhost:3000', 'https://app.operfoods.com', 'https://n8n.chilsmart.com'];
+  const allowedOrigins = [
+    'https://fast-trucks.chilsmart.com',
+    'http://localhost:3000',
+    'https://app.operfoods.com',
+    'https://n8n.chilsmart.com',
+  ];
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {
@@ -34,8 +38,14 @@ const createApp = (): Application => {
       res.header('Access-Control-Allow-Credentials', 'true');
     }
     res.header('Vary', 'Origin');
-    res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header(
+      'Access-Control-Allow-Methods',
+      'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS'
+    );
+    res.header(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Business-Id'
+    );
     if (req.method === 'OPTIONS') {
       res.sendStatus(204);
     } else {
@@ -71,8 +81,6 @@ const createApp = (): Application => {
   app.use('/', inventoryRoutes);
   app.use('/payments', paymentRoutes);
   app.use('/payment-configs', paymentConfigRoutes);
-  app.use('/mailing', mailingRoutes);
-  app.use('/public', publicRoutes);
   app.use('/plans', planRoutes);
   app.use('/subscriptions', subscriptionRoutes);
   app.use('/', cashRegisterRoutes);
@@ -85,4 +93,3 @@ const createApp = (): Application => {
 };
 
 export default createApp;
-

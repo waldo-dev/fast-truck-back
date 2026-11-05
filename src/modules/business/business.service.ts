@@ -4,7 +4,7 @@ import { businessRepository } from './business.repository';
 import { UserBusiness } from '../../shared/database/models/UserBusiness';
 import { subscriptionRepository } from '../subscriptions/subscription.repository';
 import { SubscriptionStatus } from '../../shared/database/models/enums';
-import { Plan } from '../../shared/database/models';
+import { Plan, Location, Event } from '../../shared/database/models';
 import { buildSlug } from '../../shared/utils/slugify';
 
 export class BusinessService {
@@ -41,7 +41,10 @@ export class BusinessService {
   ) {
     // Permitir ADMIN o BUSINESS_OWNER
     if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
-      throw new AppError('Only ADMIN or BUSINESS_OWNER can create business', 403);
+      throw new AppError(
+        'Only ADMIN or BUSINESS_OWNER can create business',
+        403
+      );
     }
 
     const slug = buildSlug(data.brand_name || data.name);
@@ -60,8 +63,11 @@ export class BusinessService {
     // - Si viene plan_id, se crea suscripción ACTIVE con periodo según billing_period (monthly/yearly)
     // - Si no, se crea trial de 30 días en plan Pro (o primer plan disponible)
     const now = new Date();
-    if (data.plan_id) {
-      const planIdNum = typeof data.plan_id === 'string' ? parseInt(data.plan_id, 10) : data.plan_id;
+    if (data.plan_id && userRole === UserRole.ADMIN) {
+      const planIdNum =
+        typeof data.plan_id === 'string'
+          ? parseInt(data.plan_id, 10)
+          : data.plan_id;
       const plan = await Plan.findByPk(planIdNum);
       if (!plan) {
         throw new AppError('Plan not found', 400);
@@ -87,7 +93,8 @@ export class BusinessService {
       trialEnds.setDate(trialEnds.getDate() + 30);
 
       const proPlan = await Plan.findOne({ where: { name: 'Pro' } });
-      const fallbackPlan = proPlan || (await Plan.findOne({ order: [['id', 'ASC']] }));
+      const fallbackPlan =
+        proPlan || (await Plan.findOne({ order: [['id', 'ASC']] }));
 
       if (fallbackPlan) {
         await subscriptionRepository.create({
@@ -115,7 +122,10 @@ export class BusinessService {
   ) {
     // Permitir ADMIN o BUSINESS_OWNER
     if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(userRole)) {
-      throw new AppError('Only ADMIN or BUSINESS_OWNER can update business', 403);
+      throw new AppError(
+        'Only ADMIN or BUSINESS_OWNER can update business',
+        403
+      );
     }
 
     const updatePayload = {
@@ -142,11 +152,32 @@ export class BusinessService {
 
   public async updateOperatingContext(
     businessId: number,
-    data: { mode: 'LOCAL' | 'EVENT'; location_id?: number | null; event_id?: number | null },
+    data: {
+      mode: 'LOCAL' | 'EVENT';
+      location_id?: number | null;
+      event_id?: number | null;
+    },
     role: UserRole
   ) {
+    if (
+      data.location_id &&
+      !(await Location.findOne({
+        where: { id: data.location_id, business_id: businessId },
+      }))
+    )
+      throw new AppError('Local not found', 404);
+    if (
+      data.event_id &&
+      !(await Event.findOne({
+        where: { id: data.event_id, business_id: businessId },
+      }))
+    )
+      throw new AppError('Event not found', 404);
     if (![UserRole.ADMIN, UserRole.BUSINESS_OWNER].includes(role)) {
-      throw new AppError('Only ADMIN or BUSINESS_OWNER can update operating context', 403);
+      throw new AppError(
+        'Only ADMIN or BUSINESS_OWNER can update operating context',
+        403
+      );
     }
 
     if (data.mode === 'LOCAL' && !data.location_id) {
@@ -160,8 +191,8 @@ export class BusinessService {
     const context = await businessRepository.upsertOperatingContext({
       business_id: businessId,
       mode: data.mode,
-      location_id: data.mode === 'LOCAL' ? data.location_id ?? null : null,
-      event_id: data.mode === 'EVENT' ? data.event_id ?? null : null,
+      location_id: data.mode === 'LOCAL' ? (data.location_id ?? null) : null,
+      event_id: data.mode === 'EVENT' ? (data.event_id ?? null) : null,
     });
 
     return context;
@@ -169,7 +200,7 @@ export class BusinessService {
 
   public async getDashboardOverview(userId: number) {
     const businesses = await businessRepository.findByUser(userId);
-    const businessIds = businesses.map((b) => b.id);
+    const businessIds = businesses.map(b => b.id);
 
     if (!businessIds.length) {
       return {
@@ -187,7 +218,11 @@ export class BusinessService {
     const end = new Date(today);
     end.setHours(23, 59, 59, 999);
 
-    const totals = await businessRepository.getDashboardTotals(businessIds, today, end);
+    const totals = await businessRepository.getDashboardTotals(
+      businessIds,
+      today,
+      end
+    );
 
     return {
       businesses,
@@ -197,19 +232,17 @@ export class BusinessService {
 
   public async getDashboardRecentOrders(userId: number) {
     const businesses = await businessRepository.findByUser(userId);
-    const businessIds = businesses.map((b) => b.id);
+    const businessIds = businesses.map(b => b.id);
     if (!businessIds.length) return [];
     return businessRepository.getRecentOrders(businessIds, 10);
   }
 
   public async getDashboardTopBusinesses(userId: number) {
     const businesses = await businessRepository.findByUser(userId);
-    const businessIds = businesses.map((b) => b.id);
+    const businessIds = businesses.map(b => b.id);
     if (!businessIds.length) return [];
     return businessRepository.getTopBusinessesBySales(businessIds, 5);
   }
 }
 
 export const businessService = new BusinessService();
-
-
